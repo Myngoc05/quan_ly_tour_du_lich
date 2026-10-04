@@ -110,6 +110,18 @@ CREATE TABLE IF NOT EXISTS change_requests (
 );
 `);
 
+// Migration an toàn: nếu database đã tồn tại từ bản trước (chưa có các cột mới),
+// tự động thêm cột còn thiếu thay vì để ứng dụng lỗi hoặc chặn đăng nhập.
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`[migration] Đã thêm cột ${column} vào bảng ${table}`);
+  }
+}
+ensureColumn('employees', 'is_active', 'INTEGER DEFAULT 1');
+ensureColumn('customers', 'is_locked', 'INTEGER DEFAULT 0');
+
 // Seed dữ liệu mẫu nếu database còn trống
 const tourCount = db.prepare('SELECT COUNT(*) c FROM tours').get().c;
 if (tourCount === 0) {
