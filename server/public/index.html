@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TravelGo — Khám phá thế giới cùng bạn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --blue:#2F5CE0;--blue-dark:#1E3FAE;--blue-light:#EAF0FE;--navy:#12163A;
+  --bg:#F4F6FB;--ink:#1B2233;--muted:#6B7280;--border:#E4E8F0;
+  --success:#1FAE6B;--success-bg:#E7F8EF;--warning:#F5A623;--warning-bg:#FEF3E1;
+  --danger:#E5484D;--danger-bg:#FDEAEA;--panel:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,sans-serif}
+h1,h2,h3,.logo{font-family:Poppins,sans-serif}
+button,input,select,textarea{font-family:inherit}
+a{color:inherit;text-decoration:none;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:19px;color:var(--blue)}
+.logo span{display:block;font-family:Inter;font-weight:500;font-size:10px;color:var(--muted)}
+.plane{width:26px;height:26px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex:none}
+.cust-nav{display:flex;gap:24px;font-size:14px;font-weight:500;color:#3a4152}
+.cust-nav a.active{color:var(--blue)}
+.actions{display:flex;gap:10px;align-items:center;position:relative}
+.btn{border:none;border-radius:8px;padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.outline{background:#fff;border:1px solid var(--border);color:var(--ink)}
+.btn.sm{padding:6px 12px;font-size:12.5px;border-radius:6px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--blue-light);color:var(--blue-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer}
+.dropdown{position:absolute;top:44px;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(20,30,60,.12);min-width:190px;overflow:hidden;z-index:40}
+.dropdown a{display:block;padding:10px 16px;font-size:13.5px}
+.dropdown a:hover{background:var(--bg)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700}
+.badge.wait{background:var(--warning-bg);color:#B5760B}
+.badge.confirmed{background:var(--blue-light);color:var(--blue-dark)}
+.badge.paid,.badge.active{background:var(--success-bg);color:var(--success)}
+.tour-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer}
+.tour-thumb{height:120px;position:relative;color:#fff}
+.tour-card .body{padding:14px}
+.tour-card h4{margin:0 0 6px;font-size:15px}
+.tour-card .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.tour-card .price{color:var(--blue);font-weight:700;font-size:16px}
+.tour-card .old{color:#9aa2b1;text-decoration:line-through;font-weight:500;font-size:12.5px;margin-left:6px}
+.pill{position:absolute;top:8px;left:8px;background:rgba(255,255,255,.92);color:var(--ink);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px}
+.grid{display:grid;gap:18px}
+.g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.g4,.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.g4,.g3,.g2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:10px 9px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#fff;display:inline-flex;align-items:center;justify-content:center;margin-right:4px;cursor:pointer;font-size:12px}
+.icon-btn.del{color:var(--danger);border-color:#F6CFCF}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:#3a4152}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:14px}
+.search-bar{display:flex;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;flex-wrap:wrap}
+.search-bar .seg{flex:1;min-width:140px;padding:10px 16px;border-right:1px solid var(--border)}
+.search-bar .seg small{display:block;color:var(--muted);font-size:11px;margin-bottom:2px}
+.search-bar .seg input,.search-bar .seg select{border:none;padding:0;font-size:13.5px;width:100%}
+.search-bar button{background:var(--blue);color:#fff;border:none;padding:0 26px;font-weight:700;cursor:pointer;min-width:120px}
+.hero{position:relative;padding:60px 32px 36px;color:#fff;background:linear-gradient(120deg,#123B7A,#1E5FCB 55%,#3F9BD6)}
+.hero h1{font-size:32px;margin:0 0 10px;max-width:16ch}
+.hero p{max-width:48ch;opacity:.9;margin:0 0 22px}
+.msg{padding:11px 15px;border-left:4px solid var(--success);background:var(--success-bg);font-size:13.5px;border-radius:0 8px 8px 0;margin:12px 0}
+.msg.err{border-color:var(--danger);background:var(--danger-bg);color:#7a2b1e}
+.rule-note{background:var(--blue-light);border-left:3px solid var(--blue);padding:9px 13px;font-size:12.5px;color:#233;border-radius:0 8px 8px 0;margin:14px 0}
+.auth-wrap{min-height:600px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#0E2A5C,#1F6FC9 60%,#57B8D6);padding:40px 16px}
+.auth-card{background:#fff;border-radius:16px;padding:32px 30px;width:100%;max-width:400px}
+.auth-card .logo{justify-content:center;margin-bottom:8px}
+.auth-card h2{text-align:center;margin:0 0 4px}
+.auth-card .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px}
+.foot-link{text-align:center;font-size:13px;margin-top:14px;color:var(--muted)}
+.foot-link a{color:var(--blue);font-weight:600}
+.check-row{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.side-shell{display:flex;gap:0;min-height:560px;background:#fff;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.side{width:210px;flex:none;border-right:1px solid var(--border);padding:20px 10px}
+.side a{display:block;padding:10px 14px;border-radius:8px;font-size:13.5px;font-weight:500;color:#3a4152;margin-bottom:2px}
+.side a.active{background:var(--blue-light);color:var(--blue-dark)}
+.side-content{flex:1;padding:24px 26px;min-width:0}
+.order-row{display:flex;gap:14px;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.order-thumb{width:60px;height:60px;border-radius:9px;flex:none;color:#fff}
+.order-row .info{flex:1;min-width:160px}
+.order-row .info h4{margin:0 0 4px;font-size:14.5px}
+.order-row .info .meta{font-size:12px;color:var(--muted)}
+.qr{width:140px;height:140px;background:repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0/14px 14px;border:7px solid #fff;outline:2px solid var(--ink);margin:12px 0}
+.admin-shell{display:flex;min-height:640px}
+.sidebar{width:224px;background:var(--navy);color:#cfd4ea;padding:18px 12px;flex:none}
+.sidebar .logo{color:#fff;padding:6px 10px 20px}
+.sidebar a{display:block;padding:10px 12px;border-radius:8px;font-size:13.5px;margin-bottom:2px;font-weight:500}
+.sidebar a.active{background:var(--blue);color:#fff}
+.admin-main{flex:1;padding:22px 26px;min-width:0}
+.admin-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px}
+.stat-card .lbl{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.stat-card .val{font-size:22px;font-weight:700;font-family:Poppins}
+footer.site{padding:26px 32px;color:var(--muted);font-size:12.5px;text-align:center;border-top:1px solid var(--border);background:#fff}
+.loading{padding:60px;text-align:center;color:var(--muted)}
+.icon-circle{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-size:15px}
+.icon-circle .dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--danger)}
+.notif-list a{display:block;padding:10px 14px;font-size:12.5px;white-space:normal;border-bottom:1px solid var(--border)}
+.notif-list a:last-child{border-bottom:none}
+.stars{color:#F5A623;font-size:13px;letter-spacing:1px}
+.usp{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.usp b{display:block;font-size:13.5px}
+.usp span{color:var(--muted);font-size:12px}
+.tabs-row{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:18px 0}
+.tabs-row button{background:none;border:none;padding:10px 16px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs-row button.active{color:var(--blue);border-color:var(--blue)}
+.filters-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters-row select,.filters-row input{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px}
+.pager{display:flex;gap:6px;justify-content:flex-end;margin-top:12px}
+.pager button{width:30px;height:30px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:13px}
+.pager button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.badge.locked,.badge.inactive,.badge.cancelled{background:var(--danger-bg);color:var(--danger)}
+.badge.full{background:var(--danger-bg);color:var(--danger)}
+.badge.low{background:var(--warning-bg);color:#B5760B}
+.range-btns{display:flex;gap:8px}
+.range-btns button{background:#fff;border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer}
+.range-btns button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chart-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px}
+.star-input span{font-size:22px;cursor:pointer;color:#D8DEEA}
+.star-input span.sel{color:#F5A623}
+.review-item{border-bottom:1px solid var(--border);padding:12px 0}
+.review-item:last-child{border-bottom:none}
+</style>
+</head>
+<style>
+.kh-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.kh-card.sel{border-color:var(--blue);background:var(--blue-light)}
+.kh-card .info b{display:block;font-size:14px}
+.kh-card .info span{font-size:12.5px;color:var(--muted)}
+.kh-card .price{font-weight:700;color:var(--blue);text-align:right}
+.passenger-row{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:8px 0;font-size:13.5px}
+.passenger-row span{flex:1}
+.stars{color:#F5A623;font-size:13px;letter-spacing:1px}
+.tabs-row{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:16px 0}
+.tabs-row button{background:none;border:none;padding:9px 15px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs-row button.active{color:var(--blue);border-color:var(--blue)}
+.filters-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters-row select,.filters-row input{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px}
+.badge.cho_xac_nhan{background:var(--warning-bg);color:#B5760B}
+.badge.da_xac_nhan{background:var(--blue-light);color:var(--blue-dark)}
+.badge.hoan_thanh{background:#EDEBFF;color:#5B4FE0}
+.badge.da_huy{background:var(--danger-bg);color:var(--danger)}
+.badge.con_cho,.badge.hoat_dong,.badge.thanh_cong,.badge.da_thanh_toan{background:var(--success-bg);color:var(--success)}
+.badge.sap_het{background:var(--warning-bg);color:#B5760B}
+.badge.het_cho,.badge.khoa,.badge.nghi_viec,.badge.chua_thanh_toan{background:var(--danger-bg);color:var(--danger)}
+.badge.thanh_toan_mot_phan{background:var(--warning-bg);color:#B5760B}
+.star-input span{font-size:22px;cursor:pointer;color:#D8DEEA}
+.star-input span.sel{color:#F5A623}
+.chart-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px}
+</style>
+<body>
+<div id="app"><div class="loading">Đang tải...</div></div>
+
+<script>
+/* ================= API HELPER ================= */
+const API='/api';
+function getToken(){return localStorage.getItem('tg_token');}
+function getUser(){try{return JSON.parse(localStorage.getItem('tg_user'));}catch(e){return null;}}
+function setSession(token,user){localStorage.setItem('tg_token',token);localStorage.setItem('tg_user',JSON.stringify(user));}
+function clearSession(){localStorage.removeItem('tg_token');localStorage.removeItem('tg_user');}
+function hasPerm(p){const u=getUser();return u&&u.role==='employee'&&(u.isAdmin||(u.quyen||[]).includes(p));}
+async function api(path,opts){
+  opts=opts||{};
+  const headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});
+  const token=getToken(); if(token) headers['Authorization']='Bearer '+token;
+  const res=await fetch(API+path,Object.assign({},opts,{headers}));
+  let data={}; try{data=await res.json();}catch(e){}
+  if(!res.ok) throw new Error(data.error||'Có lỗi xảy ra, vui lòng thử lại.');
+  return data;
+}
+function fmt(n){return Number(n||0).toLocaleString('vi-VN')+'đ';}
+function grad(i){return ['linear-gradient(135deg,#1D5FA8,#4FB3D9)','linear-gradient(135deg,#2E6B4F,#7FBF6A)','linear-gradient(135deg,#B5622A,#E8A23C)','linear-gradient(135deg,#5B3E9E,#9C6FD6)','linear-gradient(135deg,#0E7C7B,#4FD1C5)'][i%5];}
+function starsHtml(r){const f=Math.round(r||0);return `<span class="stars">${'★'.repeat(f)}${'☆'.repeat(5-f)}</span>`;}
+const donLabel={cho_xac_nhan:'Chờ xác nhận',da_xac_nhan:'Đã xác nhận',hoan_thanh:'Hoàn thành',da_huy:'Đã hủy'};
+const choLabel={con_cho:'Còn chỗ',sap_het:'Sắp hết',het_cho:'Hết chỗ'};
+const ttThanhToanLabel={chua_thanh_toan:'Chưa thanh toán',thanh_toan_mot_phan:'Thanh toán một phần',da_thanh_toan:'Đã thanh toán',can_hoan_tien:'Cần hoàn tiền',khong_phat_sinh:'—'};
+const vaiTroLabel={ADMIN:'Quản trị viên',DIEU_HANH:'Điều hành tour',CSKH:'Chăm sóc khách hàng',KE_TOAN:'Kế toán'};
+
+let route={view:'home',params:{}};
+function nav(view,params){route={view,params:params||{}};render();window.scrollTo({top:0,behavior:'smooth'});}
+function toggleMenu(){const m=document.getElementById('userMenu');if(m)m.style.display=m.style.display==='none'?'block':'none';}
+function logout(){clearSession();nav('home');}
+function val(id){return document.getElementById(id).value.trim();}
+
+/* ================= HEADER / FOOTER ================= */
+function siteHeader(active){
+ const links=[['home','Trang chủ'],['list-trong_nuoc','Tour trong nước'],['list-nuoc_ngoai','Tour nước ngoài'],['contact','Liên hệ']];
+ const user=getUser();
+ let authArea;
+ if(!user){
+   authArea=`<button class="btn outline sm" onclick="nav('login')">Đăng nhập</button><button class="btn primary sm" onclick="nav('register')">Đăng ký</button>`;
+ }else{
+   const label = user.role==='employee' ? 'AD' : (user.name||'KH').split(' ').slice(-1)[0][0]+'K';
+   authArea=`<div class="avatar" onclick="toggleMenu()">${label}</div>
+   <div class="dropdown" id="userMenu" style="display:none">
+     ${user.role==='customer'?`<a onclick="nav('account',{sub:'orders'})">Tài khoản của tôi</a>`:''}
+     ${user.role==='employee'?`<a onclick="nav('admin-dash')">Trang quản trị</a>`:''}
+     <a onclick="logout()">Đăng xuất</a>
+   </div>`;
+ }
+ return `<header class="top">
+  <div class="logo" onclick="nav('home')"><span class="plane">✈</span><div>TravelGo<span>Khám phá thế giới cùng bạn</span></div></div>
+  <nav class="cust-nav">${links.map(l=>`<a class="${l[0]===active?'active':''}" onclick="nav('${l[0]}')">${l[1]}</a>`).join('')}</nav>
+  <div class="actions">${authArea}</div>
+ </header>`;
+}
+function siteFooter(){return `<footer class="site">© 2026 TravelGo — Công ty Du lịch TravelGo · Hotline hỗ trợ: 1900 1900</footer>`;}
+
+function tourCard(t,i){
+ const kh=t.khoi_hanh_gan_nhat;
+ return `<div class="tour-card" onclick="nav('detail',{id:'${t.ma_tour}'})">
+  <div class="tour-thumb" style="background:${grad(i)}"><span class="pill">${t.khu_vuc==='trong_nuoc'?'Tour trong nước':'Tour nước ngoài'}</span>
+   ${kh&&kh.phan_tram_giam?`<span class="pill" style="left:auto;right:8px;background:var(--danger);color:#fff">-${kh.phan_tram_giam}%</span>`:''}</div>
+  <div class="body"><h4>${t.ten_tour}</h4><div class="meta">🗓 ${t.so_ngay} ngày ${t.so_dem} đêm ${kh?('· Còn '+kh.cho_con+' chỗ'):''}</div>
+  ${t.so_danh_gia?`<div class="meta">${starsHtml(t.diem_danh_gia)} ${t.diem_danh_gia}/5 (${t.so_danh_gia}) · ${t.da_dat} khách đã đặt</div>`:`<div class="meta">${t.da_dat||0} khách đã đặt</div>`}
+  <div class="price">${kh?fmt(kh.gia_nguoi_lon):'Liên hệ'}${kh&&kh.gia_goc?`<span class="old">${fmt(kh.gia_goc)}</span>`:''}</div></div></div>`;
+}
+
+/* ================= TRANG CHỦ / DANH SÁCH / CHI TIẾT ================= */
+async function Home(){
+ const tours=await api('/tours');
+ return `${siteHeader('home')}
+ <section class="hero"><div class="wrap" style="padding:0">
+  <h1>Khám phá thế giới<br>cùng TravelGo</h1>
+  <p>Những hành trình tuyệt vời đang chờ bạn — đặt tour và thanh toán trực tuyến chỉ trong vài phút.</p>
+  <div class="search-bar" style="max-width:600px">
+    <div class="seg"><small>Điểm đến</small><input id="qKeyword" placeholder="Nhập điểm đến..."></div>
+    <button onclick="nav('search',{kw:document.getElementById('qKeyword').value})">Tìm kiếm</button>
+  </div></div></section>
+ <div class="wrap" style="padding:20px 24px 0">
+  <div class="grid g4">
+   <div class="usp">🌏<div><b>Đa dạng điểm đến</b><span>Trong nước & quốc tế</span></div></div>
+   <div class="usp">🏷️<div><b>Giá tốt nhất</b><span>Nhiều ưu đãi hấp dẫn</span></div></div>
+   <div class="usp">🛡️<div><b>Đặt tour dễ dàng</b><span>Thanh toán an toàn</span></div></div>
+   <div class="usp">🎧<div><b>Hỗ trợ 24/7</b><span>Luôn đồng hành cùng bạn</span></div></div>
+  </div>
+ </div>
+ <div class="wrap" style="padding:28px 24px 32px">
+  <h2 style="font-size:20px">Tour nổi bật</h2>
+  <div class="grid g4">${tours.map(tourCard).join('')}</div>
+ </div>${siteFooter()}`;
+}
+async function SearchResult(p){
+ const tours=await api('/tours?keyword='+encodeURIComponent(p.kw||''));
+ return `${siteHeader('')}<div class="wrap" style="padding:28px 24px">
+  <h2>Kết quả tìm kiếm ${p.kw?`cho "${p.kw}"`:''}</h2>
+  <div class="grid g4">${tours.length?tours.map(tourCard).join(''):'<p style="color:var(--muted)">Không tìm thấy tour phù hợp.</p>'}</div>
+ </div>${siteFooter()}`;
+}
+async function TourListView(khuVuc){
+ const tours=await api('/tours?khu_vuc='+khuVuc);
+ return `${siteHeader('list-'+khuVuc)}<div class="wrap" style="padding:28px 24px">
+  <h2>${khuVuc==='trong_nuoc'?'Tour trong nước':'Tour nước ngoài'}</h2>
+  <p style="color:var(--muted);margin-top:-6px">Tìm thấy ${tours.length} tour</p>
+  <div class="grid g4">${tours.map(tourCard).join('')}</div>
+ </div>${siteFooter()}`;
+}
+let selectedKH=null;
+async function TourDetail(p){
+ const t=await api('/tours/'+p.id);
+ selectedKH = t.khoi_hanh_gan_nhat ? t.khoi_hanh_gan_nhat.ma_khoi_hanh : null;
+ window.__tour=t;
+ return `${siteHeader('')}<div class="wrap" style="padding:28px 24px">
+  <a onclick="nav('home')" style="color:var(--blue);font-size:13px;font-weight:600">← Quay lại</a>
+  <div class="grid g2" style="grid-template-columns:2fr 1fr;margin-top:14px;align-items:start">
+   <div>
+    <div class="tour-thumb" style="background:${grad(0)};height:240px;border-radius:12px"></div>
+    <h1 style="margin:18px 0 6px">${t.ten_tour}</h1>
+    <p style="color:var(--muted);margin:0 0 4px">${starsHtml(t.diem_danh_gia)} ${t.diem_danh_gia}/5 (${t.so_danh_gia} đánh giá) · Đã đặt ${t.da_dat}+ lượt</p>
+    <p style="color:var(--muted);margin:0 0 16px">🗓 ${t.so_ngay} ngày ${t.so_dem} đêm · Khởi hành từ ${t.diem_di} · ${t.phuong_tien_chinh||''}</p>
+    <div class="tabs-row" id="tdTabs">
+     <button class="active" onclick="tdSwitch('schedule',this)">Lịch trình</button>
+     <button onclick="tdSwitch('service',this)">Dịch vụ</button>
+     <button onclick="tdSwitch('terms',this)">Điều khoản</button>
+     <button onclick="tdSwitch('reviews',this)">Đánh giá (${t.so_danh_gia})</button>
+    </div>
+    <div id="tdPane-schedule"><div class="card">${t.lich_trinh.map(s=>`<p style="font-size:14px;margin:8px 0"><b>${s.tieu_de}:</b> ${s.noi_dung}</p>`).join('')}</div></div>
+    <div id="tdPane-service" style="display:none"><div class="card">${t.dich_vu.map(d=>`<p style="font-size:14px;margin:6px 0">${d.bao_gom?'✅':'❌'} ${d.ten_dich_vu}</p>`).join('')||'<p style="color:var(--muted)">Chưa có thông tin dịch vụ.</p>'}</div></div>
+    <div id="tdPane-terms" style="display:none"><div class="card">
+     <p style="font-size:14px">${t.dieu_khoan||''}</p><p style="font-size:14px;color:var(--muted)">${t.luu_y||''}</p>
+     <p style="font-size:13px;color:var(--muted);margin-top:10px">Lưu ý: tour chỉ được đổi 1 lần, trong 5 ngày sau khi đặt và khởi hành mới phải cách ngày đổi tối thiểu 7 ngày. Việc đổi tour do nhân viên TravelGo thực hiện khi bạn liên hệ hỗ trợ.</p>
+    </div></div>
+    <div id="tdPane-reviews" style="display:none"></div>
+   </div>
+   <div class="card">
+    <h3 style="margin-top:0">Chọn khởi hành</h3>
+    <div id="khList">${t.khoi_hanh.filter(k=>k.trang_thai==='mo_ban').map(k=>`
+     <div class="kh-card ${k.ma_khoi_hanh===selectedKH?'sel':''}" onclick="selectKhoiHanh('${k.ma_khoi_hanh}')">
+      <div class="info"><b>${k.ngay_khoi_hanh} · ${k.gio_khoi_hanh}</b><span>${choLabel[k.trang_thai_cho]} (còn ${k.cho_con})</span></div>
+      <div class="price">${fmt(k.gia_nguoi_lon)}<br><span style="font-size:11px;color:var(--muted);font-weight:500">trẻ em ${fmt(k.gia_tre_em)}</span></div>
+     </div>`).join('')||'<p style="color:var(--muted);font-size:13px">Hiện chưa có lịch khởi hành mở bán.</p>'}</div>
+    <div id="bookMsg"></div>
+    <div class="field"><label>Số người lớn</label><input type="number" id="bAdult" value="2" min="1"></div>
+    <div class="field"><label>Trẻ em (dưới 12 tuổi)</label><input type="number" id="bChild" value="0" min="0"></div>
+    <div class="field"><label>Phương tiện</label><select id="bVehicle"><option value="">-- Không chọn --</option>${t.dich_vu.filter(d=>d.loai==='phuong_tien').map(d=>`<option value="${d.ma_dich_vu}">${d.ten_dich_vu}</option>`).join('')}</select></div>
+    <div class="field"><label>Khách sạn</label><select id="bHotel"><option value="">-- Không chọn --</option>${t.dich_vu.filter(d=>d.loai==='khach_san').map(d=>`<option value="${d.ma_dich_vu}">${d.ten_dich_vu}</option>`).join('')}</select></div>
+    <button class="btn primary" style="width:100%" onclick="submitBooking('${t.ma_tour}')">Đặt ngay</button>
+   </div>
+  </div>
+ </div>${siteFooter()}`;
+}
+function selectKhoiHanh(id){ selectedKH=id; document.querySelectorAll('.kh-card').forEach(c=>c.classList.remove('sel')); event.currentTarget.classList.add('sel'); }
+function tdSwitch(name,btn){
+ document.querySelectorAll('#tdTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+ ['schedule','service','terms','reviews'].forEach(k=>{const el=document.getElementById('tdPane-'+k); if(el) el.style.display = k===name?'block':'none';});
+ if(name==='reviews') loadReviews();
+}
+async function loadReviews(){
+ const tourId=route.params.id;
+ const pane=document.getElementById('tdPane-reviews');
+ pane.innerHTML='<div class="loading">Đang tải đánh giá...</div>';
+ const data=await api('/tours/'+tourId+'/danh-gia');
+ pane.innerHTML=`<div class="card">
+  <p style="font-weight:700;font-size:16px">${starsHtml(data.diem_tb)} ${data.diem_tb}/5 · ${data.so_danh_gia} đánh giá</p>
+  ${data.danh_gia.map(r=>`<div style="border-bottom:1px solid var(--border);padding:10px 0"><b>${r.ho_ten}</b> ${starsHtml(r.so_sao)}<p style="font-size:13.5px;margin:4px 0 0">${r.noi_dung||''}</p></div>`).join('')||'<p style="color:var(--muted)">Chưa có đánh giá nào cho tour này.</p>'}
+ </div>`;
+}
+async function submitBooking(tourId){
+ const msg=document.getElementById('bookMsg');
+ const user=getUser();
+ if(!user||user.role!=='customer'){ msg.innerHTML=`<div class="msg err">Vui lòng đăng nhập bằng tài khoản khách hàng để đặt tour.</div>`; return; }
+ if(!selectedKH){ msg.innerHTML=`<div class="msg err">Vui lòng chọn một lịch khởi hành.</div>`; return; }
+ const body={ma_khoi_hanh:selectedKH,so_nguoi_lon:parseInt(document.getElementById('bAdult').value||'0'),so_tre_em:parseInt(document.getElementById('bChild').value||'0'),
+  ma_phuong_tien:document.getElementById('bVehicle').value||null,ma_khach_san:document.getElementById('bHotel').value||null};
+ try{
+  const b=await api('/bookings',{method:'POST',body:JSON.stringify(body)});
+  nav('account',{sub:'orderDetail',bookingId:b.so_phieu_dang_ky});
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+
+/* ================= ĐĂNG NHẬP / ĐĂNG KÝ ================= */
+function Login(){
+ return `${siteHeader('')}<div class="auth-wrap"><div class="auth-card">
+  <div class="logo"><span class="plane">✈</span>TravelGo</div><h2>Đăng nhập</h2><div class="sub">Vui lòng đăng nhập để tiếp tục</div>
+  <div id="loginMsg"></div>
+  <div class="field"><label>Email hoặc số điện thoại</label><input id="lEmail" placeholder="Nhập email hoặc SĐT"></div>
+  <div class="field"><label>Mật khẩu</label><input id="lPass" type="password" placeholder="Nhập mật khẩu"></div>
+  <button class="btn primary" style="width:100%" onclick="doLogin()">Đăng nhập</button>
+  <div class="foot-link">Chưa có tài khoản? <a onclick="nav('register')">Đăng ký ngay</a></div>
+  <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:14px">Demo: ngoc@mail.com / 123456 (khách hàng) · admin@travelgo.vn / admin123 (quản trị)</p>
+ </div></div>${siteFooter()}`;
+}
+async function doLogin(){
+ const msg=document.getElementById('loginMsg');
+ try{
+  const r=await api('/auth/login',{method:'POST',body:JSON.stringify({identifier:val('lEmail'),password:val('lPass')})});
+  setSession(r.token,r.user);
+  nav(r.user.role==='employee'?'admin-dash':'account',{sub:'orders'});
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+function Register(){
+ return `${siteHeader('')}<div class="auth-wrap"><div class="auth-card" style="max-width:440px">
+  <div class="logo"><span class="plane">✈</span>TravelGo</div><h2>Đăng ký tài khoản</h2><div class="sub">Tạo tài khoản để trải nghiệm nhiều ưu đãi hấp dẫn</div>
+  <div id="regMsg"></div>
+  <div class="field"><label>Họ và tên</label><input id="rName"></div>
+  <div class="field"><label>Số CCCD (12 chữ số)</label><input id="rCccd" maxlength="12"></div>
+  <div class="field"><label>Email</label><input id="rEmail"></div>
+  <div class="field"><label>Số điện thoại</label><input id="rPhone"></div>
+  <div class="field"><label>Mật khẩu</label><input id="rPass" type="password"></div>
+  <div class="field"><label>Xác nhận mật khẩu</label><input id="rPass2" type="password"></div>
+  <div class="check-row"><input type="checkbox" id="rAgree" style="margin-top:2px">Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo mật</div>
+  <button class="btn primary" style="width:100%" onclick="doRegister()">Đăng ký</button>
+  <div class="foot-link">Đã có tài khoản? <a onclick="nav('login')">Đăng nhập ngay</a></div>
+ </div></div>${siteFooter()}`;
+}
+async function doRegister(){
+ const msg=document.getElementById('regMsg');
+ if(val('rPass')!==val('rPass2')){ msg.innerHTML=`<div class="msg err">Mật khẩu xác nhận không khớp.</div>`; return; }
+ if(!document.getElementById('rAgree').checked){ msg.innerHTML=`<div class="msg err">Bạn cần đồng ý với Điều khoản sử dụng.</div>`; return; }
+ try{
+  const r=await api('/auth/register',{method:'POST',body:JSON.stringify({name:val('rName'),cccd:val('rCccd'),email:val('rEmail'),phone:val('rPhone'),password:val('rPass')})});
+  setSession(r.token,r.user); nav('account',{sub:'orders'});
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+
+/* ================= TÀI KHOẢN KHÁCH HÀNG ================= */
+async function Account(p){
+ const sub=p.sub||'orders';
+ const sideItems=[['orders','🧾 Đơn đặt tour'],['profile','👤 Thông tin cá nhân'],['reviews','⭐ Đánh giá của tôi']];
+ let content='';
+ if(sub==='orderDetail') content=await OrderDetail(p.bookingId);
+ else if(sub==='orders') content=await OrdersList();
+ else if(sub==='profile') content=await Profile();
+ else if(sub==='reviews') content=await MyReviews();
+ return `${siteHeader('')}<div class="wrap" style="padding:26px 24px"><div class="side-shell">
+  <aside class="side">${sideItems.map(x=>`<a class="${x[0]===sub?'active':''}" onclick="nav('account',{sub:'${x[0]}'})">${x[1]}</a>`).join('')}<a onclick="logout()">🚪 Đăng xuất</a></aside>
+  <div class="side-content">${content}</div>
+ </div></div>${siteFooter()}`;
+}
+async function Profile(){
+ const c=await api('/khach-hang/me');
+ return `<h2 style="margin-top:0">Thông tin cá nhân</h2>
+ <div class="grid g2">
+  <div class="field"><label>Họ tên</label><input id="pName" value="${c.ho_ten}"></div>
+  <div class="field"><label>Số CCCD</label><input value="${c.so_cccd}" disabled></div>
+  <div class="field"><label>Email</label><input id="pEmail" value="${c.email}"></div>
+  <div class="field"><label>Số điện thoại</label><input id="pPhone" value="${c.sdt}"></div>
+ </div><div id="pMsg"></div><button class="btn primary" onclick="saveProfile()">Lưu thay đổi</button>`;
+}
+async function saveProfile(){
+ try{ await api('/khach-hang/me',{method:'PUT',body:JSON.stringify({ho_ten:val('pName'),email:val('pEmail'),sdt:val('pPhone')})});
+  document.getElementById('pMsg').innerHTML=`<div class="msg">Đã lưu thay đổi.</div>`;
+ }catch(e){ document.getElementById('pMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function MyReviews(){
+ const rows=await api('/danh-gia/mine');
+ return `<h2 style="margin-top:0">Đánh giá của tôi</h2>
+ ${rows.map(r=>`<div class="card" style="margin-bottom:10px"><b>${r.ten_tour}</b> ${starsHtml(r.so_sao)}<p style="font-size:13.5px;margin:6px 0 0">${r.noi_dung||''}</p></div>`).join('')||'<p style="color:var(--muted)">Bạn chưa có đánh giá nào. Hãy đánh giá sau khi hoàn thành một tour!</p>'}`;
+}
+let ordersFilter='all';
+async function OrdersList(){
+ const mine=await api('/bookings/mine');
+ const tabs=[['all','Tất cả'],['cho_xac_nhan','Chờ xác nhận'],['da_xac_nhan','Đã xác nhận'],['hoan_thanh','Hoàn thành'],['da_huy','Đã hủy']];
+ const filtered= ordersFilter==='all' ? mine : mine.filter(b=>b.trang_thai===ordersFilter);
+ return `<h2 style="margin-top:0">Đơn đặt tour</h2>
+ <div class="status-tabs" id="orderTabs">${tabs.map(t=>`<button class="${t[0]===ordersFilter?'active':''}" onclick="filterOrders('${t[0]}',this)">${t[1]}</button>`).join('')}</div>
+ <div id="ordersListBox">${renderOrdersRows(filtered)}</div>`;
+}
+function renderOrdersRows(rows){
+ if(!rows.length) return '<p style="color:var(--muted)">Không có đơn nào ở trạng thái này.</p>';
+ return rows.map((b,i)=>`<div class="order-row"><div class="order-thumb" style="background:${grad(i)}"></div>
+ <div class="info"><h4>${b.tour.ten_tour}</h4><div class="meta">Khởi hành: ${b.khoi_hanh.ngay_khoi_hanh} · ${b.so_nguoi_lon} người lớn${b.so_tre_em?`, ${b.so_tre_em} trẻ em`:''} · ${fmt(b.tong_tien)}</div></div>
+ <span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span>
+ <button class="btn outline sm" onclick="nav('account',{sub:'orderDetail',bookingId:'${b.so_phieu_dang_ky}'})">Xem chi tiết</button></div>`).join('');
+}
+async function filterOrders(status,btn){
+ ordersFilter=status;
+ document.querySelectorAll('#orderTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+ const mine=await api('/bookings/mine');
+ document.getElementById('ordersListBox').innerHTML=renderOrdersRows(status==='all'?mine:mine.filter(b=>b.trang_thai===status));
+}
+async function OrderDetail(bookingId){
+ const b=await api('/bookings/'+bookingId);
+ const needMore = b.so_nguoi_lon + b.so_tre_em - b.hanh_khach.length;
+ return `<a onclick="nav('account',{sub:'orders'})" style="color:var(--blue);font-size:13px;font-weight:600">← Quay lại đơn đặt tour</a>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0"><h2 style="margin:0">Chi tiết đơn — ${b.so_phieu_dang_ky}</h2><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></div>
+ <div id="odMsg"></div>
+ <p style="font-size:13.5px"><b>Tour:</b> ${b.tour.ten_tour}<br><b>Khởi hành:</b> ${b.khoi_hanh.ngay_khoi_hanh} ${b.khoi_hanh.gio_khoi_hanh}<br>
+ <b>Số lượng:</b> ${b.so_nguoi_lon} người lớn${b.so_tre_em?`, ${b.so_tre_em} trẻ em`:''} · <b>Tổng tiền:</b> ${fmt(b.tong_tien)}</p>
+
+ ${b.trang_thai==='cho_xac_nhan'?`
+ <div class="rule-note">Vui lòng nhập đầy đủ thông tin hành khách (khớp đúng số người lớn/trẻ em) để nhân viên có thể xác nhận đơn.</div>
+ <h4>Danh sách hành khách (${b.hanh_khach.length}/${b.so_nguoi_lon + b.so_tre_em})</h4>
+ ${b.hanh_khach.map(h=>`<div class="passenger-row"><span>${h.ho_ten} ${h.la_tre_em?'(trẻ em)':'(người lớn)'}</span><button class="btn sm outline" onclick="removePassenger('${b.so_phieu_dang_ky}',${h.ma_hanh_khach})">Xóa</button></div>`).join('')}
+ ${needMore>0?`<div class="field" style="margin-top:10px"><label>Thêm hành khách</label>
+   <div class="grid g2"><input id="hkName" placeholder="Họ tên"><select id="hkType"><option value="0">Người lớn</option><option value="1">Trẻ em</option></select></div>
+   <button class="btn outline sm" style="margin-top:8px" onclick="addPassenger('${b.so_phieu_dang_ky}')">+ Thêm</button></div>`:''}
+ `:''}
+
+ ${b.hoa_don?`
+ <div class="card" style="margin-top:14px"><h4 style="margin-top:0">Thanh toán</h4>
+  <p style="font-size:13.5px">Trạng thái: <span class="badge ${b.cong_no.trang_thai_thanh_toan}">${ttThanhToanLabel[b.cong_no.trang_thai_thanh_toan]}</span><br>
+  Đã thanh toán: ${fmt(b.cong_no.da_thanh_toan)} / ${fmt(b.cong_no.phai_tra)}</p>
+  ${b.cong_no.con_phai_thu>0?`
+   <div class="field" style="max-width:260px"><label>Phương thức thanh toán</label>
+    <select id="payMethod"><option>Ví điện tử</option><option>Thẻ ATM</option><option>Chuyển khoản</option><option>Tiền mặt</option></select></div>
+   <div class="qr"></div>
+   <button class="btn primary sm" onclick="payInvoice('${b.hoa_don.ma_hoa_don}','${b.cong_no.con_phai_thu}','${b.so_phieu_dang_ky}')">Thanh toán ${fmt(b.cong_no.con_phai_thu)}</button>`:''}
+ </div>`:''}
+
+ ${b.trang_thai==='hoan_thanh'?`<div id="reviewBox" style="margin-top:14px"></div>`:''}
+ `;
+}
+async function removePassenger(bookingId,hkId){ try{ await api(`/bookings/${bookingId}/hanh-khach/${hkId}`,{method:'DELETE'}); nav('account',{sub:'orderDetail',bookingId}); }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+async function addPassenger(bookingId){
+ try{ await api(`/bookings/${bookingId}/hanh-khach`,{method:'POST',body:JSON.stringify({ho_ten:val('hkName'),la_tre_em:document.getElementById('hkType').value==='1'})});
+  nav('account',{sub:'orderDetail',bookingId});
+ }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function payInvoice(hoaDonId,soTien,bookingId){
+ try{
+  const method=document.getElementById('payMethod').value;
+  await api(`/hoa-don/${hoaDonId}/thu`,{method:'POST',body:JSON.stringify({so_tien:Number(soTien),phuong_thuc:method})});
+  document.getElementById('odMsg').innerHTML=`<div class="msg">Thanh toán thành công!</div>`;
+  setTimeout(()=>nav('account',{sub:'orderDetail',bookingId}),600);
+ }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+// Hiển thị form đánh giá nếu đơn đã hoàn thành (gọi riêng sau khi render xong)
+async function maybeShowReviewForm(bookingId){
+ const box=document.getElementById('reviewBox'); if(!box) return;
+ const mine=await api('/danh-gia/mine');
+ const existed=mine.find(r=>r.so_phieu_dang_ky===bookingId);
+ if(existed){ box.innerHTML=`<div class="card"><h4 style="margin-top:0">Đánh giá của bạn</h4>${starsHtml(existed.so_sao)}<p style="font-size:13.5px">${existed.noi_dung||''}</p></div>`; return; }
+ box.innerHTML=`<div class="card"><h4 style="margin-top:0">Đánh giá tour này</h4><div id="revMsg"></div>
+  <div class="star-input" id="starInput">${[1,2,3,4,5].map(n=>`<span data-v="${n}" onclick="setStar(${n})">★</span>`).join('')}</div>
+  <textarea id="revComment" rows="2" placeholder="Cảm nhận của bạn..." style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:8px"></textarea>
+  <button class="btn primary sm" onclick="submitReview('${bookingId}')">Gửi đánh giá</button></div>`;
+}
+let selectedStar=5;
+function setStar(n){ selectedStar=n; document.querySelectorAll('#starInput span').forEach(s=>s.classList.toggle('sel', +s.dataset.v<=n)); }
+async function submitReview(bookingId){
+ try{ await api('/danh-gia',{method:'POST',body:JSON.stringify({so_phieu_dang_ky:bookingId,so_sao:selectedStar,noi_dung:val('revComment')})});
+  nav('account',{sub:'orderDetail',bookingId});
+ }catch(e){ document.getElementById('revMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+
+/* ================= ADMIN ================= */
+function adminSidebar(active){
+ const items=[
+  ['admin-dash','Tổng quan',null],['admin-tours','Quản lý tour','TOUR_MANAGE'],
+  ['admin-bookings','Đặt chỗ (booking)','BOOKING_MANAGE'],['admin-customers','Khách hàng','CUSTOMER_MANAGE'],
+  ['admin-finance','Thanh toán & tài chính','PAYMENT_MANAGE'],['admin-staff','Nhân viên','EMPLOYEE_MANAGE'],
+  ['admin-suppliers','Nhà cung cấp','SUPPLIER_MANAGE'],['admin-reports','Báo cáo & thống kê','REPORT_VIEW'],
+ ];
+ const u=getUser();
+ return `<aside class="sidebar"><div class="logo" style="display:flex;gap:8px;align-items:center;font-weight:700" onclick="nav('home')"><span class="plane">✈</span>TravelGo</div>
+ ${items.filter(x=>!x[2]||hasPerm(x[2])).map(x=>`<a class="${x[0]===active?'active':''}" onclick="nav('${x[0]}')">${x[1]}</a>`).join('')}
+ <div style="color:#9aa2c9;font-size:11.5px;padding:14px 12px 4px">${u?vaiTroLabel[u.vaiTro]||'':''}</div>
+ <a style="color:#9aa2c9" onclick="logout()">🚪 Đăng xuất</a></aside>`;
+}
+function adminTop(title){const u=getUser();return `<div class="admin-top"><h2 style="margin:0">${title}</h2><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--muted)">${u?u.email:''}</span><div class="avatar">A</div></div></div>`;}
+
+async function AdminDash(){
+ const s=await api('/thong-ke/tong-quan');
+ const stats=[['Tổng tour',s.totalTours],['Tổng đơn đặt',s.totalBookings],['Doanh thu tháng này',fmt(s.monthRevenue)],['Khách hàng',s.totalCustomers]];
+ return `<div class="admin-shell">${adminSidebar('admin-dash')}<main class="admin-main">${adminTop('Tổng quan')}
+ <div class="grid g4">${stats.map(x=>`<div class="stat-card"><div class="lbl">${x[0]}</div><div class="val">${x[1]}</div></div>`).join('')}</div>
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Đơn đặt gần đây</h3>
+ <table><thead><tr><th>Mã phiếu</th><th>Khách hàng</th><th>Tour</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
+ <tbody>${s.recent.map(b=>`<tr><td>${b.so_phieu_dang_ky}</td><td>${b.ten_khach}</td><td>${b.ten_tour}</td><td>${fmt(b.tong_tien)}</td><td><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></td></tr>`).join('')||'<tr><td colspan="5">Chưa có đơn</td></tr>'}</tbody></table></div>
+ </main></div>`;
+}
+
+/* ---- Quản lý tour ---- */
+let toursCache=[];
+async function AdminTours(){
+ const tours=await api('/tours'); toursCache=tours;
+ return `<div class="admin-shell">${adminSidebar('admin-tours')}<main class="admin-main">
+ <div class="admin-top"><h2 style="margin:0">Quản lý tour</h2></div>
+ <div class="card"><table><thead><tr><th>Mã</th><th>Tên tour</th><th>Điểm đến</th><th>Số khởi hành</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody>${tours.map(t=>`<tr><td>${t.ma_tour}</td><td>${t.ten_tour}</td><td>${t.diem_den}</td><td>${t.khoi_hanh.length}</td>
+ <td><span class="badge ${t.trang_thai==='hoat_dong'?'hoat_dong':'khoa'}">${t.trang_thai==='hoat_dong'?'Đang hoạt động':t.trang_thai==='tam_ngung'?'Tạm ngừng':'Ngừng'}</span></td>
+ <td><span class="icon-btn edit" onclick="viewTourAdmin('${t.ma_tour}')">👁</span><span class="icon-btn del" onclick="deleteTour('${t.ma_tour}')">🗑</span></td></tr>`).join('')}</tbody></table></div>
+
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm tour mới</h3><div id="tourMsg"></div>
+ <div class="grid g2">
+  <div class="field"><label>Tên tour</label><input id="tName" placeholder="VD: Nha Trang - VinWonders"></div>
+  <div class="field"><label>Khu vực</label><select id="tRegion"><option value="trong_nuoc">Trong nước</option><option value="nuoc_ngoai">Nước ngoài</option></select></div>
+  <div class="field"><label>Điểm khởi hành</label><input id="tFrom" placeholder="VD: TP.HCM"></div>
+  <div class="field"><label>Điểm đến</label><input id="tTo" placeholder="VD: Nha Trang"></div>
+  <div class="field"><label>Số ngày</label><input id="tDays" type="number" placeholder="VD: 4"></div>
+  <div class="field"><label>Số đêm</label><input id="tNights" type="number" placeholder="VD: 3"></div>
+ </div>
+ <div class="field"><label>Lịch trình (mỗi dòng 1 ngày)</label><textarea id="tSchedule" rows="3" placeholder="Đón khách - tham quan...&#10;Tự do tắm biển..."></textarea></div>
+ <button class="btn primary" onclick="addTour()">Thêm tour</button></div>
+
+ <div id="tourDetailAdminBox"></div>
+ </main></div>`;
+}
+async function addTour(){
+ const msg=document.getElementById('tourMsg');
+ try{
+  await api('/tours',{method:'POST',body:JSON.stringify({
+   ten_tour:val('tName'),khu_vuc:document.getElementById('tRegion').value,diem_di:val('tFrom'),diem_den:val('tTo'),
+   so_ngay:parseInt(val('tDays')||'1'),so_dem:parseInt(val('tNights')||'0'),
+   lich_trinh:(val('tSchedule')||'').split('\n').filter(Boolean)
+  })});
+  nav('admin-tours');
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function deleteTour(id){
+ if(!confirm('Xóa / ngừng tour này?')) return;
+ const r=await api('/tours/'+id,{method:'DELETE'});
+ if(r.note) alert(r.note);
+ nav('admin-tours');
+}
+async function viewTourAdmin(id){
+ const t=await api('/tours/'+id);
+ document.getElementById('tourDetailAdminBox').innerHTML=`<div class="card" style="margin-top:18px">
+  <h3 style="margin-top:0">Khởi hành của: ${t.ten_tour}</h3>
+  <table><thead><tr><th>Mã</th><th>Ngày đi</th><th>Giá NL</th><th>Giá TE</th><th>Chỗ tối đa</th><th>Còn</th><th>Trạng thái</th></tr></thead>
+  <tbody>${t.khoi_hanh.map(k=>`<tr><td>${k.ma_khoi_hanh}</td><td>${k.ngay_khoi_hanh}</td><td>${fmt(k.gia_nguoi_lon)}</td><td>${fmt(k.gia_tre_em)}</td><td>${k.so_cho_toi_da}</td><td>${k.cho_con}</td><td><span class="badge ${k.trang_thai_cho}">${k.trang_thai}</span></td></tr>`).join('')}</tbody></table>
+  <h4>Thêm khởi hành mới</h4><div id="khMsg"></div>
+  <div class="grid g2">
+   <div class="field"><label>Ngày khởi hành</label><input type="date" id="khDate"></div>
+   <div class="field"><label>Giờ</label><input type="time" id="khTime" value="06:00"></div>
+   <div class="field"><label>Giá người lớn</label><input type="number" id="khGiaNL"></div>
+   <div class="field"><label>Giá trẻ em</label><input type="number" id="khGiaTE"></div>
+   <div class="field"><label>Giá gốc (nếu giảm giá)</label><input type="number" id="khGiaGoc"></div>
+   <div class="field"><label>Số chỗ tối đa</label><input type="number" id="khSeats"></div>
+  </div>
+  <button class="btn primary sm" onclick="addKhoiHanh('${t.ma_tour}')">Thêm khởi hành</button>
+ </div>`;
+}
+async function addKhoiHanh(tourId){
+ const msg=document.getElementById('khMsg');
+ try{
+  await api(`/tours/${tourId}/khoi-hanh`,{method:'POST',body:JSON.stringify({
+   ngay_khoi_hanh:val('khDate'),gio_khoi_hanh:val('khTime'),gia_nguoi_lon:parseInt(val('khGiaNL')||'0'),
+   gia_tre_em:parseInt(val('khGiaTE')||'0'),gia_goc:parseInt(val('khGiaGoc')||'0'),so_cho_toi_da:parseInt(val('khSeats')||'1')
+  })});
+  viewTourAdmin(tourId);
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+
+/* ---- Đặt chỗ (booking) ---- */
+async function AdminBookings(){
+ const bookings=await api('/bookings');
+ return `<div class="admin-shell">${adminSidebar('admin-bookings')}<main class="admin-main">${adminTop('Danh sách đặt chỗ')}
+ <div class="filters-row">
+  <select id="bfStatus" onchange="applyBookingFilter()"><option value="">Tất cả trạng thái</option><option value="cho_xac_nhan">Chờ xác nhận</option><option value="da_xac_nhan">Đã xác nhận</option><option value="hoan_thanh">Hoàn thành</option><option value="da_huy">Đã hủy</option></select>
+ </div>
+ <div class="card"><table><thead><tr><th>Mã phiếu</th><th>Khách hàng</th><th>Tour</th><th>Khởi hành</th><th>SL</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody id="bookingsTbody">${renderBookingRows(bookings)}</tbody></table></div>
+ <div id="bookingDetailBox"></div>
+ </main></div>`;
+}
+function renderBookingRows(rows){
+ return rows.map(b=>`<tr><td>${b.so_phieu_dang_ky}</td><td>${b.khach_hang.ho_ten}</td><td>${b.tour.ten_tour}</td><td>${b.khoi_hanh.ngay_khoi_hanh}</td><td>${b.so_luong_nguoi}</td><td>${fmt(b.tong_tien)}</td>
+ <td><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></td>
+ <td><button class="btn sm outline" onclick="viewBookingAdmin('${b.so_phieu_dang_ky}')">Chi tiết</button></td></tr>`).join('')||'<tr><td colspan="8">Không có đơn phù hợp</td></tr>';
+}
+async function applyBookingFilter(){
+ const q=document.getElementById('bfStatus').value;
+ const bookings=await api('/bookings'+(q?('?trang_thai='+q):''));
+ document.getElementById('bookingsTbody').innerHTML=renderBookingRows(bookings);
+}
+async function viewBookingAdmin(id){
+ const b=await api('/bookings/'+id);
+ const box=document.getElementById('bookingDetailBox');
+ box.innerHTML=`<div class="card" style="margin-top:18px">
+  <div style="display:flex;justify-content:space-between"><h3 style="margin-top:0">Chi tiết đơn ${b.so_phieu_dang_ky}</h3><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></div>
+  <div id="bdMsg"></div>
+  <p style="font-size:13.5px"><b>Khách hàng:</b> ${b.khach_hang.ho_ten} — ${b.khach_hang.sdt} · CCCD: ${b.khach_hang.so_cccd}<br>
+  <b>Tour:</b> ${b.tour.ten_tour} · <b>Khởi hành:</b> ${b.khoi_hanh.ngay_khoi_hanh}<br>
+  <b>Số lượng:</b> ${b.so_nguoi_lon} người lớn, ${b.so_tre_em} trẻ em · <b>Tổng tiền:</b> ${fmt(b.tong_tien)}</p>
+  <h4>Hành khách (${b.hanh_khach.length}/${b.so_luong_nguoi})</h4>
+  ${b.hanh_khach.map(h=>`<div class="passenger-row"><span>${h.ho_ten} ${h.la_tre_em?'(trẻ em)':'(người lớn)'}</span></div>`).join('')||'<p style="color:var(--muted);font-size:13px">Khách chưa khai báo hành khách.</p>'}
+  ${b.hoa_don?`<p style="font-size:13.5px;margin-top:10px"><b>Thanh toán:</b> ${fmt(b.cong_no.da_thanh_toan)}/${fmt(b.cong_no.phai_tra)} — <span class="badge ${b.cong_no.trang_thai_thanh_toan}">${ttThanhToanLabel[b.cong_no.trang_thai_thanh_toan]}</span></p>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+   ${b.trang_thai==='cho_xac_nhan'?`<button class="btn sm primary" onclick="confirmBooking('${b.so_phieu_dang_ky}')">Xác nhận đơn</button>`:''}
+   ${(b.trang_thai==='cho_xac_nhan'||b.trang_thai==='da_xac_nhan')?`<button class="btn sm outline" onclick="showCancelForm('${b.so_phieu_dang_ky}')">Hủy đơn</button>`:''}
+   ${b.trang_thai==='da_xac_nhan'?`<button class="btn sm outline" onclick="showChangeTourForm('${b.so_phieu_dang_ky}','${b.ma_khoi_hanh}')">Lập phiếu đổi tour</button>`:''}
+   ${b.trang_thai==='da_xac_nhan'?`<button class="btn sm outline" onclick="markComplete('${b.so_phieu_dang_ky}')">Đánh dấu hoàn thành</button>`:''}
+  </div>
+  <div id="bdExtra"></div>
+ </div>`;
+}
+async function confirmBooking(id){ try{ await api(`/bookings/${id}/xac-nhan`,{method:'POST'}); viewBookingAdmin(id); applyBookingFilter(); }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+async function markComplete(id){ try{ await api(`/bookings/${id}/hoan-thanh`,{method:'POST'}); viewBookingAdmin(id); applyBookingFilter(); }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+function showCancelForm(id){
+ document.getElementById('bdExtra').innerHTML=`<div class="field" style="margin-top:10px"><label>Lý do hủy</label><input id="cancelReason">
+ <label style="margin-top:8px">Phí hủy (nếu có)</label><input id="cancelFee" type="number" value="0">
+ <button class="btn sm primary" style="margin-top:8px" onclick="doCancelBooking('${id}')">Xác nhận hủy đơn</button></div>`;
+}
+async function doCancelBooking(id){
+ try{ await api(`/bookings/${id}/huy`,{method:'POST',body:JSON.stringify({ly_do:val('cancelReason'),phi_huy:parseInt(val('cancelFee')||'0')})});
+  viewBookingAdmin(id); applyBookingFilter();
+ }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function showChangeTourForm(id,curKH){
+ const t=await api('/tours');
+ const allKH=t.flatMap(tt=>tt.khoi_hanh.filter(k=>k.ma_khoi_hanh!==curKH&&k.trang_thai==='mo_ban').map(k=>({...k,ten_tour:tt.ten_tour})));
+ document.getElementById('bdExtra').innerHTML=`<div class="field" style="margin-top:10px"><label>Đổi sang khởi hành</label>
+ <select id="newKH">${allKH.map(k=>`<option value="${k.ma_khoi_hanh}">${k.ten_tour} — ${k.ngay_khoi_hanh} (${fmt(k.gia_nguoi_lon)})</option>`).join('')}</select>
+ <label style="margin-top:8px">Lý do đổi</label><input id="changeReason">
+ <button class="btn sm primary" style="margin-top:8px" onclick="doChangeTour('${id}')">Lập phiếu đổi tour</button></div>`;
+}
+async function doChangeTour(id){
+ try{ const r=await api('/phieu-doi-tour',{method:'POST',body:JSON.stringify({so_phieu_dang_ky:id,ma_khoi_hanh_moi:document.getElementById('newKH').value,ly_do:val('changeReason')})});
+  alert(r.message); viewBookingAdmin(id); applyBookingFilter();
+ }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+
+/* ---- Khách hàng ---- */
+async function AdminCustomers(){
+ const rows=await api('/khach-hang');
+ return `<div class="admin-shell">${adminSidebar('admin-customers')}<main class="admin-main">${adminTop('Danh sách khách hàng')}
+ <div class="card"><table><thead><tr><th>Mã KH</th><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Số lần đặt</th><th>Phân loại</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody>${rows.map(c=>`<tr><td>${c.ma_khach_hang}</td><td>${c.ho_ten}</td><td>${c.sdt}</td><td>${c.email}</td><td>${c.so_lan_dat}</td>
+ <td><span class="badge ${c.phan_loai==='VIP'?'hoan_thanh':'da_xac_nhan'}">${c.phan_loai}</span></td>
+ <td><span class="badge ${c.bi_khoa?'khoa':'hoat_dong'}">${c.bi_khoa?'Khóa':'Hoạt động'}</span></td>
+ <td><button class="btn sm outline" onclick="toggleLock('${c.ma_khach_hang}')">${c.bi_khoa?'Mở khóa':'Khóa'}</button></td></tr>`).join('')}</tbody></table></div>
+ </main></div>`;
+}
+async function toggleLock(id){ await api('/khach-hang/'+id+'/khoa',{method:'PATCH'}); nav('admin-customers'); }
+
+/* ---- Thanh toán & tài chính ---- */
+async function AdminFinance(){
+ const [invoices,methods,congNo]=await Promise.all([api('/hoa-don'),api('/thong-ke/phuong-thuc-thanh-toan'),api('/thong-ke/cong-no')]);
+ const totalThu=congNo.reduce((s,c)=>s+c.da_thanh_toan,0);
+ const totalPhaiThu=congNo.reduce((s,c)=>s+c.con_phai_thu,0);
+ return `<div class="admin-shell">${adminSidebar('admin-finance')}<main class="admin-main">${adminTop('Thanh toán & tài chính')}
+ <div class="grid g3" style="margin-bottom:18px">
+  <div class="stat-card"><div class="lbl">Đã thu</div><div class="val" style="color:var(--success)">${fmt(totalThu)}</div></div>
+  <div class="stat-card"><div class="lbl">Còn phải thu</div><div class="val" style="color:var(--warning)">${fmt(totalPhaiThu)}</div></div>
+  <div class="stat-card"><div class="lbl">Tổng hóa đơn</div><div class="val">${invoices.length}</div></div>
+ </div>
+ <div class="chart-box"><h3 style="margin:0 0 8px">Phương thức thanh toán</h3><canvas id="financeDonut" height="100"></canvas></div>
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Hóa đơn</h3>
+ <table><thead><tr><th>Mã hóa đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Đã thu</th><th>Trạng thái</th></tr></thead>
+ <tbody>${invoices.map(i=>`<tr><td>${i.ma_hoa_don}</td><td>${i.ten_khach}</td><td>${fmt(i.tong_tien)}</td><td>${fmt(i.so_tien_da_thanh_toan)}</td><td><span class="badge ${i.trang_thai_thanh_toan}">${ttThanhToanLabel[i.trang_thai_thanh_toan]}</span></td></tr>`).join('')||'<tr><td colspan="5">Chưa có hóa đơn</td></tr>'}</tbody></table></div>
+ </main></div>`;
+}
+function mountFinanceChart(methods){
+ new Chart(document.getElementById('financeDonut'),{type:'doughnut',data:{labels:methods.map(m=>m.phuong_thuc),datasets:[{data:methods.map(m=>m.ty_le),backgroundColor:['#2F5CE0','#1FAE6B','#F5A623','#9AA2B1']}]},options:{plugins:{legend:{position:'bottom'}}}});
+}
+
+/* ---- Nhân viên ---- */
+async function AdminStaff(){
+ const employees=await api('/nhan-vien');
+ const vaiTros=await api('/vai-tro');
+ const isAdmin=(getUser()||{}).isAdmin;
+ return `<div class="admin-shell">${adminSidebar('admin-staff')}<main class="admin-main">${adminTop('Danh sách nhân viên')}
+ <div class="card"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Chức vụ</th><th>Vai trò</th><th>Email</th><th>Trạng thái</th>${isAdmin?'<th>Thao tác</th>':''}</tr></thead>
+ <tbody>${employees.map(e=>`<tr><td>${e.ma_nhan_vien}</td><td>${e.ho_ten}</td><td>${e.chuc_vu||''}</td><td>${vaiTroLabel[e.ma_vai_tro]||e.ma_vai_tro}</td><td>${e.email}</td>
+ <td><span class="badge ${e.trang_thai==='hoat_dong'?'hoat_dong':'khoa'}">${e.trang_thai==='hoat_dong'?'Hoạt động':e.trang_thai==='khoa'?'Khóa':'Nghỉ việc'}</span></td>
+ ${isAdmin?`<td>${e.ma_vai_tro==='ADMIN'?'—':`<button class="btn sm outline" onclick="toggleStaff('${e.ma_nhan_vien}','${e.trang_thai==='hoat_dong'?'khoa':'hoat_dong'}')">${e.trang_thai==='hoat_dong'?'Khóa':'Kích hoạt'}</button>`}</td>`:''}</tr>`).join('')}</tbody></table></div>
+ ${isAdmin?`<div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm nhân viên</h3><div id="empMsg"></div>
+ <div class="grid g2">
+  <div class="field"><label>Họ tên</label><input id="eName"></div>
+  <div class="field"><label>Email đăng nhập</label><input id="eEmail"></div>
+  <div class="field"><label>Mật khẩu</label><input id="ePass" type="password"></div>
+  <div class="field"><label>SĐT</label><input id="ePhone"></div>
+  <div class="field"><label>Chức vụ</label><input id="ePos"></div>
+  <div class="field"><label>Vai trò</label><select id="eRole">${vaiTros.filter(v=>v.ma_vai_tro!=='ADMIN').map(v=>`<option value="${v.ma_vai_tro}">${v.ten_vai_tro}</option>`).join('')}</select></div>
+ </div><button class="btn primary" onclick="addEmployee()">Thêm nhân viên</button></div>`:''}
+ </main></div>`;
+}
+async function addEmployee(){
+ const msg=document.getElementById('empMsg');
+ try{ await api('/nhan-vien',{method:'POST',body:JSON.stringify({ho_ten:val('eName'),email:val('eEmail'),password:val('ePass'),sdt:val('ePhone'),chuc_vu:val('ePos'),ma_vai_tro:document.getElementById('eRole').value})});
+  nav('admin-staff');
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function toggleStaff(id,trangThai){ await api(`/nhan-vien/${id}/trang-thai`,{method:'PATCH',body:JSON.stringify({trang_thai:trangThai})}); nav('admin-staff'); }
+
+/* ---- Nhà cung cấp ---- */
+async function AdminSuppliers(){
+ const rows=await api('/nha-cung-cap');
+ return `<div class="admin-shell">${adminSidebar('admin-suppliers')}<main class="admin-main">${adminTop('Nhà cung cấp')}
+ <div class="card"><table><thead><tr><th>Mã</th><th>Tên</th><th>Loại</th><th>Liên hệ</th><th>SĐT</th><th>Giá hợp đồng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody>${rows.map(s=>`<tr><td>${s.ma_ncc}</td><td>${s.ten_ncc}</td><td>${s.loai}</td><td>${s.nguoi_lien_he||''}</td><td>${s.sdt||''}</td><td>${fmt(s.gia_hop_dong)}</td>
+ <td><span class="badge ${s.trang_thai==='hop_tac'?'hoat_dong':'khoa'}">${s.trang_thai==='hop_tac'?'Hợp tác':s.trang_thai==='tam_ngung'?'Tạm ngừng':'Chấm dứt'}</span></td>
+ <td><span class="icon-btn del" onclick="deleteSupplier('${s.ma_ncc}')">🗑</span></td></tr>`).join('')}</tbody></table></div>
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm nhà cung cấp</h3><div id="supMsg"></div>
+ <div class="grid g2">
+  <div class="field"><label>Tên nhà cung cấp</label><input id="sName"></div>
+  <div class="field"><label>Loại</label><select id="sType"><option>Khách sạn</option><option>Vận chuyển</option><option>Vé máy bay</option><option>Nhà hàng</option><option>Tham quan</option><option>Khác</option></select></div>
+  <div class="field"><label>Người liên hệ</label><input id="sContact"></div>
+  <div class="field"><label>SĐT</label><input id="sPhone"></div>
+  <div class="field"><label>Email</label><input id="sEmail"></div>
+  <div class="field"><label>Giá hợp đồng (VNĐ)</label><input id="sPrice" type="number"></div>
+ </div><button class="btn primary" onclick="addSupplier()">Thêm nhà cung cấp</button></div>
+ </main></div>`;
+}
+async function addSupplier(){
+ const msg=document.getElementById('supMsg');
+ try{ await api('/nha-cung-cap',{method:'POST',body:JSON.stringify({ten_ncc:val('sName'),loai:document.getElementById('sType').value,nguoi_lien_he:val('sContact'),sdt:val('sPhone'),email:val('sEmail'),gia_hop_dong:parseInt(val('sPrice')||'0')})});
+  nav('admin-suppliers');
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function deleteSupplier(id){ if(!confirm('Xóa nhà cung cấp này?')) return; try{ await api('/nha-cung-cap/'+id,{method:'DELETE'}); }catch(e){} nav('admin-suppliers'); }
+
+/* ---- Báo cáo & thống kê ---- */
+async function AdminReports(){
+ return `<div class="admin-shell">${adminSidebar('admin-reports')}<main class="admin-main">${adminTop('Báo cáo & thống kê')}
+ <div id="reportBody"><div class="loading">Đang tải báo cáo...</div></div>
+ </main></div>`;
+}
+async function loadReportBody(){
+ const [byMonth,byTour]=await Promise.all([api('/thong-ke/doanh-thu-thang'),api('/thong-ke/doanh-thu-tour')]);
+ document.getElementById('reportBody').innerHTML=`
+  <div class="chart-box"><h3 style="margin:0 0 8px">Doanh thu theo tháng</h3><canvas id="repBar" height="120"></canvas></div>
+  <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Doanh thu theo tour</h3>
+  <table><thead><tr><th>#</th><th>Tên tour</th><th>Số đơn hiệu lực</th><th>Số khách</th><th>Thực thu</th></tr></thead>
+  <tbody>${byTour.map((t,i)=>`<tr><td>${i+1}</td><td>${t.ten_tour}</td><td>${t.so_don_hieu_luc}</td><td>${t.so_khach}</td><td>${fmt(t.thuc_thu)}</td></tr>`).join('')||'<tr><td colspan="5">Chưa có dữ liệu</td></tr>'}</tbody></table></div>`;
+ new Chart(document.getElementById('repBar'),{type:'bar',data:{labels:byMonth.map(m=>m.label),datasets:[{data:byMonth.map(m=>m.thuc_thu),backgroundColor:'#2F5CE0',borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v/1000000)+'tr'}}}}});
+}
+
+/* ================= ROUTER ================= */
+async function render(){
+ const app=document.getElementById('app');
+ app.innerHTML='<div class="loading">Đang tải...</div>';
+ const user=getUser();
+ if(route.view.startsWith('admin') && (!user || user.role!=='employee')){ route={view:'login',params:{}}; }
+ try{
+  let html;
+  switch(route.view){
+   case 'home': html=await Home(); break;
+   case 'list-trong_nuoc': html=await TourListView('trong_nuoc'); break;
+   case 'list-nuoc_ngoai': html=await TourListView('nuoc_ngoai'); break;
+   case 'detail': html=await TourDetail(route.params); break;
+   case 'search': html=await SearchResult(route.params); break;
+   case 'login': html=Login(); break;
+   case 'register': html=Register(); break;
+   case 'account': html=await Account(route.params); break;
+   case 'contact': html=`${siteHeader('contact')}<div class="wrap" style="padding:28px 24px"><h2>Liên hệ</h2><p>Hotline: <b>1900 1900</b> · Email: support@travelgo.vn</p></div>${siteFooter()}`; break;
+   case 'admin-dash': html=await AdminDash(); break;
+   case 'admin-tours': html=await AdminTours(); break;
+   case 'admin-bookings': html=await AdminBookings(); break;
+   case 'admin-customers': html=await AdminCustomers(); break;
+   case 'admin-finance': html=await AdminFinance(); break;
+   case 'admin-staff': html=await AdminStaff(); break;
+   case 'admin-suppliers': html=await AdminSuppliers(); break;
+   case 'admin-reports': html=await AdminReports(); break;
+   default: html=await Home();
+  }
+  app.innerHTML=html;
+  if(route.view==='account' && route.params.sub==='orderDetail'){ maybeShowReviewForm(route.params.bookingId); }
+  if(route.view==='admin-finance'){ const methods=await api('/thong-ke/phuong-thuc-thanh-toan'); mountFinanceChart(methods); }
+  if(route.view==='admin-reports'){ await loadReportBody(); }
+ }catch(e){
+  app.innerHTML=`${siteHeader('')}<div class="wrap" style="padding:40px 24px"><div class="msg err">${e.message||'Không thể tải dữ liệu từ máy chủ.'}</div></div>`;
+ }
+}
+render();
+</script>
+</body>
+</html>
