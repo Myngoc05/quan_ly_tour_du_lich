@@ -1,74 +1,133 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const router = express.Router();
 
-function serialize(t) {
-  const reviewAgg = db.prepare('SELECT COUNT(*) c, COALESCE(AVG(rating),0) a FROM reviews WHERE tour_id=?').get(t.id);
-  const bookedAgg = db.prepare(`SELECT COALESCE(SUM(qty),0) s FROM bookings WHERE tour_id=? AND status != 'cancelled'`).get(t.id);
-  const discountPercent = t.old_cost && t.old_cost > t.cost ? Math.round((1 - t.cost / t.old_cost) * 100) : 0;
-  let seatStatus = 'active';     // Còn chỗ
-  if (t.seats <= 0) seatStatus = 'full';       // Hết chỗ
-  else if (t.seats <= 5) seatStatus = 'low';   // Sắp hết
+function ratingOf(ma_tour) {
+  const r = db.prepare('SELECT diem_tb, so_danh_gia FROM v_diem_tour WHERE ma_tour=?').get(ma_tour);
+  return r || { diem_tb: 0, so_danh_gia: 0 };
+}
+function seatsLeft(ma_khoi_hanh) {
+  const r = db.prepare('SELECT cho_con FROM v_cho_con WHERE ma_khoi_hanh=?').get(ma_khoi_hanh);
+  return r ? r.cho_con : 0;
+}
+function serializeKhoiHanh(k) {
+  const choCon = seatsLeft(k.ma_khoi_hanh);
+  let trangThaiCho = 'con_cho';
+  if (choCon <= 0) trangThaiCho = 'het_cho';
+  else if (choCon <= 5) trangThaiCho = 'sap_het';
+  const discount = k.gia_goc && k.gia_goc > k.gia_nguoi_lon ? Math.round((1 - k.gia_nguoi_lon / k.gia_goc) * 100) : 0;
+  return { ...k, cho_con: choCon, trang_thai_cho: trangThaiCho, phan_tram_giam: discount };
+}
+function serializeTour(t) {
+  const khoiHanh = db.prepare(`SELECT * FROM khoi_hanh WHERE ma_tour=? ORDER BY ngay_khoi_hanh ASC`).all(t.ma_tour).map(serializeKhoiHanh);
+  const sapToi = khoiHanh.find(k => k.trang_thai === 'mo_ban' && k.ngay_khoi_hanh >= new Date().toISOString().slice(0, 10));
+  const { diem_tb, so_danh_gia } = ratingOf(t.ma_tour);
+  const daDat = db.prepare(`
+    SELECT COALESCE(SUM(p.so_nguoi_lon + p.so_tre_em),0) c FROM phieu_dang_ky p
+    JOIN khoi_hanh k ON k.ma_khoi_hanh = p.ma_khoi_hanh
+    WHERE k.ma_tour=? AND p.trang_thai <> 'da_huy'`).get(t.ma_tour).c;
   return {
-    ...t,
-    schedule: JSON.parse(t.schedule || '[]'),
-    rating: Math.round(reviewAgg.a * 10) / 10,
-    reviewCount: reviewAgg.c,
-    bookedCount: bookedAgg.s,
-    discountPercent,
-    seatStatus,
+    ...t, khoi_hanh: khoiHanh, khoi_hanh_gan_nhat: sapToi || null,
+    diem_danh_gia: diem_tb, so_danh_gia, da_dat: daDat,
+    hinh_anh: db.prepare('SELECT * FROM tour_hinh_anh WHERE ma_tour=? ORDER BY thu_tu').all(t.ma_tour),
+    dich_vu: db.prepare(`SELECT d.*, td.bao_gom FROM tour_dich_vu td JOIN dich_vu d ON d.ma_dich_vu = td.ma_dich_vu WHERE td.ma_tour=?`).all(t.ma_tour),
+    lich_trinh: db.prepare('SELECT * FROM tour_lich_trinh WHERE ma_tour=? ORDER BY ngay_thu').all(t.ma_tour),
   };
 }
 
-// Danh sách tour công khai — hỗ trợ lọc theo vùng miền / từ khóa / khoảng giá
+// Danh sách tour — lọc theo khu vực / từ khóa / khoảng giá (theo giá khởi hành gần nhất)
 router.get('/', (req, res) => {
-  const { region, keyword, minPrice, maxPrice } = req.query;
-  let sql = "SELECT * FROM tours WHERE status = 'active'";
+  const { khu_vuc, keyword, minPrice, maxPrice, diem_di, diem_den, ngay_khoi_hanh, phuong_tien } = req.query;
+  let sql = `SELECT * FROM tour WHERE trang_thai = 'hoat_dong'`;
   const args = [];
-  if (region) { sql += ' AND region = ?'; args.push(region); }
-  if (keyword) { sql += ' AND (name LIKE ? OR to_place LIKE ?)'; args.push(`%${keyword}%`, `%${keyword}%`); }
-  if (minPrice) { sql += ' AND cost >= ?'; args.push(Number(minPrice)); }
-  if (maxPrice) { sql += ' AND cost <= ?'; args.push(Number(maxPrice)); }
-  sql += ' ORDER BY depart_date ASC';
-  const rows = db.prepare(sql).all(...args).map(serialize);
-  const filtered = req.query.seatStatus ? rows.filter(t => t.seatStatus === req.query.seatStatus) : rows;
-  res.json(filtered);
+  if (khu_vuc) { sql += ' AND khu_vuc = ?'; args.push(khu_vuc); }
+  if (keyword) { sql += ' AND (ten_tour LIKE ? OR diem_den LIKE ?)'; args.push(`%${keyword}%`, `%${keyword}%`); }
+  if (diem_di) { sql += ' AND diem_di = ?'; args.push(diem_di); }
+  if (diem_den) { sql += ' AND diem_den = ?'; args.push(diem_den); }
+  if (phuong_tien) { sql += ' AND phuong_tien_chinh = ?'; args.push(phuong_tien); }
+  let rows = db.prepare(sql).all(...args).map(serializeTour);
+  if (minPrice) rows = rows.filter(t => t.khoi_hanh_gan_nhat && t.khoi_hanh_gan_nhat.gia_nguoi_lon >= Number(minPrice));
+  if (maxPrice) rows = rows.filter(t => t.khoi_hanh_gan_nhat && t.khoi_hanh_gan_nhat.gia_nguoi_lon <= Number(maxPrice));
+  // Lọc theo ngày khởi hành: tour phải có ít nhất 1 khởi hành còn mở bán đúng ngày đó
+  if (ngay_khoi_hanh) rows = rows.filter(t => t.khoi_hanh.some(k => k.ngay_khoi_hanh === ngay_khoi_hanh && k.trang_thai === 'mo_ban'));
+  res.json(rows);
 });
+
 
 router.get('/:id', (req, res) => {
-  const t = db.prepare('SELECT * FROM tours WHERE id = ?').get(req.params.id);
+  const t = db.prepare('SELECT * FROM tour WHERE ma_tour=?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Không tìm thấy tour.' });
-  res.json(serialize(t));
+  res.json(serializeTour(t));
 });
 
-// Thêm tour — chỉ nhân viên/admin
-router.post('/', requireAuth(['employee']), (req, res) => {
-  const { name, region, from_place, to_place, duration, cost, old_cost, depart_date, seats, schedule } = req.body;
-  if (!name || !to_place || !cost || !depart_date || !seats) {
-    return res.status(400).json({ error: 'Thiếu thông tin bắt buộc (tên, điểm đến, giá, ngày khởi hành, số chỗ).' });
-  }
+// Thêm tour mới — chỉ nhân viên có quyền TOUR_MANAGE
+router.post('/', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  const b = req.body;
+  if (!b.ten_tour || !b.diem_den || !b.so_ngay) return res.status(400).json({ error: 'Thiếu tên tour, điểm đến hoặc số ngày.' });
   const id = 'T' + Date.now().toString().slice(-6);
-  db.prepare(`INSERT INTO tours (id,name,region,from_place,to_place,duration,cost,old_cost,depart_date,seats,schedule)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(id, name, region || 'trongnuoc', from_place || '', to_place, duration || '', cost, old_cost || 0, depart_date, seats, JSON.stringify(schedule || []));
-  res.status(201).json(serialize(db.prepare('SELECT * FROM tours WHERE id=?').get(id)));
+  try {
+    db.prepare(`INSERT INTO tour (ma_tour,ten_tour,khu_vuc,diem_di,diem_den,so_ngay,so_dem,mo_ta,diem_tham_quan,am_thuc,thoi_gian_ly_tuong,phuong_tien_chinh,dieu_khoan,luu_y)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(id, b.ten_tour, b.khu_vuc || 'trong_nuoc', b.diem_di || '', b.diem_den, b.so_ngay, b.so_dem || 0,
+        b.mo_ta || '', b.diem_tham_quan || '', b.am_thuc || '', b.thoi_gian_ly_tuong || '', b.phuong_tien_chinh || '', b.dieu_khoan || '', b.luu_y || '');
+    (b.lich_trinh || []).forEach((nd, i) => db.prepare('INSERT INTO tour_lich_trinh (ma_tour,ngay_thu,tieu_de,noi_dung) VALUES (?,?,?,?)').run(id, i + 1, `Ngày ${i + 1}`, nd));
+  } catch (e) { return res.status(400).json({ error: e.message }); }
+  res.status(201).json(serializeTour(db.prepare('SELECT * FROM tour WHERE ma_tour=?').get(id)));
 });
 
-// Sửa tour
-router.put('/:id', requireAuth(['employee']), (req, res) => {
-  const t = db.prepare('SELECT * FROM tours WHERE id=?').get(req.params.id);
+router.put('/:id', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  const t = db.prepare('SELECT * FROM tour WHERE ma_tour=?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Không tìm thấy tour.' });
   const f = { ...t, ...req.body };
-  db.prepare(`UPDATE tours SET name=?,region=?,from_place=?,to_place=?,duration=?,cost=?,old_cost=?,depart_date=?,seats=?,status=?,schedule=? WHERE id=?`)
-    .run(f.name, f.region, f.from_place, f.to_place, f.duration, f.cost, f.old_cost, f.depart_date, f.seats, f.status, JSON.stringify(f.schedule || JSON.parse(t.schedule || '[]')), t.id);
-  res.json(serialize(db.prepare('SELECT * FROM tours WHERE id=?').get(t.id)));
+  try {
+    db.prepare(`UPDATE tour SET ten_tour=?,khu_vuc=?,diem_di=?,diem_den=?,so_ngay=?,so_dem=?,mo_ta=?,diem_tham_quan=?,am_thuc=?,thoi_gian_ly_tuong=?,phuong_tien_chinh=?,dieu_khoan=?,luu_y=?,trang_thai=? WHERE ma_tour=?`)
+      .run(f.ten_tour, f.khu_vuc, f.diem_di, f.diem_den, f.so_ngay, f.so_dem, f.mo_ta, f.diem_tham_quan, f.am_thuc, f.thoi_gian_ly_tuong, f.phuong_tien_chinh, f.dieu_khoan, f.luu_y, f.trang_thai, t.ma_tour);
+  } catch (e) { return res.status(400).json({ error: e.message }); }
+  res.json(serializeTour(db.prepare('SELECT * FROM tour WHERE ma_tour=?').get(t.ma_tour)));
 });
 
-// Xóa tour
-router.delete('/:id', requireAuth(['employee']), (req, res) => {
-  db.prepare('DELETE FROM tours WHERE id=?').run(req.params.id);
-  res.json({ ok: true });
+// Xóa / ngừng tour: nếu đã có khởi hành thì CSDL (trigger) sẽ chặn xóa cứng — chuyển sang "ngừng hoạt động"
+router.delete('/:id', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  try {
+    db.prepare('DELETE FROM tour WHERE ma_tour=?').run(req.params.id);
+    res.json({ ok: true, mode: 'deleted' });
+  } catch (e) {
+    db.prepare(`UPDATE tour SET trang_thai='ngung' WHERE ma_tour=?`).run(req.params.id);
+    res.json({ ok: true, mode: 'stopped', note: 'Tour đã có khởi hành nên được chuyển sang trạng thái ngừng hoạt động thay vì xóa.' });
+  }
+});
+
+// ---- Khởi hành (các chuyến đi cụ thể của một tour) ----
+router.post('/:id/khoi-hanh', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  const b = req.body;
+  const id = 'KH' + Date.now().toString().slice(-8);
+  try {
+    db.prepare(`INSERT INTO khoi_hanh (ma_khoi_hanh,ma_tour,ngay_khoi_hanh,gio_khoi_hanh,dia_diem_khoi_hanh,gia_nguoi_lon,gia_tre_em,gia_goc,so_cho_toi_da)
+      VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run(id, req.params.id, b.ngay_khoi_hanh, b.gio_khoi_hanh || '06:00', b.dia_diem_khoi_hanh || '', b.gia_nguoi_lon, b.gia_tre_em, b.gia_goc || 0, b.so_cho_toi_da);
+  } catch (e) { return res.status(400).json({ error: e.message }); }
+  res.status(201).json(serializeKhoiHanh(db.prepare('SELECT * FROM khoi_hanh WHERE ma_khoi_hanh=?').get(id)));
+});
+
+router.put('/khoi-hanh/:id', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  const k = db.prepare('SELECT * FROM khoi_hanh WHERE ma_khoi_hanh=?').get(req.params.id);
+  if (!k) return res.status(404).json({ error: 'Không tìm thấy khởi hành.' });
+  const f = { ...k, ...req.body };
+  try {
+    db.prepare(`UPDATE khoi_hanh SET ngay_khoi_hanh=?,gio_khoi_hanh=?,dia_diem_khoi_hanh=?,gia_nguoi_lon=?,gia_tre_em=?,gia_goc=?,so_cho_toi_da=?,trang_thai=? WHERE ma_khoi_hanh=?`)
+      .run(f.ngay_khoi_hanh, f.gio_khoi_hanh, f.dia_diem_khoi_hanh, f.gia_nguoi_lon, f.gia_tre_em, f.gia_goc, f.so_cho_toi_da, f.trang_thai, k.ma_khoi_hanh);
+  } catch (e) { return res.status(400).json({ error: e.message }); }
+  res.json(serializeKhoiHanh(db.prepare('SELECT * FROM khoi_hanh WHERE ma_khoi_hanh=?').get(k.ma_khoi_hanh)));
+});
+
+router.delete('/khoi-hanh/:id', requireAuth(['employee']), requirePermission('TOUR_MANAGE'), (req, res) => {
+  try {
+    db.prepare('DELETE FROM khoi_hanh WHERE ma_khoi_hanh=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: 'Khởi hành đã có đơn đăng ký, chỉ có thể đóng bán hoặc hủy (đổi trạng thái).' });
+  }
 });
 
 module.exports = router;
