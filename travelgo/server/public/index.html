@@ -131,6 +131,32 @@ footer.site{padding:26px 32px;color:var(--muted);font-size:12.5px;text-align:cen
 .review-item:last-child{border-bottom:none}
 </style>
 </head>
+<style>
+.kh-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.kh-card.sel{border-color:var(--blue);background:var(--blue-light)}
+.kh-card .info b{display:block;font-size:14px}
+.kh-card .info span{font-size:12.5px;color:var(--muted)}
+.kh-card .price{font-weight:700;color:var(--blue);text-align:right}
+.passenger-row{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:8px 0;font-size:13.5px}
+.passenger-row span{flex:1}
+.stars{color:#F5A623;font-size:13px;letter-spacing:1px}
+.tabs-row{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:16px 0}
+.tabs-row button{background:none;border:none;padding:9px 15px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs-row button.active{color:var(--blue);border-color:var(--blue)}
+.filters-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters-row select,.filters-row input{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px}
+.badge.cho_xac_nhan{background:var(--warning-bg);color:#B5760B}
+.badge.da_xac_nhan{background:var(--blue-light);color:var(--blue-dark)}
+.badge.hoan_thanh{background:#EDEBFF;color:#5B4FE0}
+.badge.da_huy{background:var(--danger-bg);color:var(--danger)}
+.badge.con_cho,.badge.hoat_dong,.badge.thanh_cong,.badge.da_thanh_toan{background:var(--success-bg);color:var(--success)}
+.badge.sap_het{background:var(--warning-bg);color:#B5760B}
+.badge.het_cho,.badge.khoa,.badge.nghi_viec,.badge.chua_thanh_toan{background:var(--danger-bg);color:var(--danger)}
+.badge.thanh_toan_mot_phan{background:var(--warning-bg);color:#B5760B}
+.star-input span{font-size:22px;cursor:pointer;color:#D8DEEA}
+.star-input span.sel{color:#F5A623}
+.chart-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px}
+</style>
 <body>
 <div id="app"><div class="loading">Đang tải...</div></div>
 
@@ -141,6 +167,7 @@ function getToken(){return localStorage.getItem('tg_token');}
 function getUser(){try{return JSON.parse(localStorage.getItem('tg_user'));}catch(e){return null;}}
 function setSession(token,user){localStorage.setItem('tg_token',token);localStorage.setItem('tg_user',JSON.stringify(user));}
 function clearSession(){localStorage.removeItem('tg_token');localStorage.removeItem('tg_user');}
+function hasPerm(p){const u=getUser();return u&&u.role==='employee'&&(u.isAdmin||(u.quyen||[]).includes(p));}
 async function api(path,opts){
   opts=opts||{};
   const headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});
@@ -152,33 +179,28 @@ async function api(path,opts){
 }
 function fmt(n){return Number(n||0).toLocaleString('vi-VN')+'đ';}
 function grad(i){return ['linear-gradient(135deg,#1D5FA8,#4FB3D9)','linear-gradient(135deg,#2E6B4F,#7FBF6A)','linear-gradient(135deg,#B5622A,#E8A23C)','linear-gradient(135deg,#5B3E9E,#9C6FD6)','linear-gradient(135deg,#0E7C7B,#4FD1C5)'][i%5];}
-const statusLabel={wait:'Chờ xác nhận',confirmed:'Đã xác nhận',paid:'Đã thanh toán',done:'Hoàn thành',cancelled:'Đã hủy'};
+function starsHtml(r){const f=Math.round(r||0);return `<span class="stars">${'★'.repeat(f)}${'☆'.repeat(5-f)}</span>`;}
+const donLabel={cho_xac_nhan:'Chờ xác nhận',da_xac_nhan:'Đã xác nhận',hoan_thanh:'Hoàn thành',da_huy:'Đã hủy'};
+const choLabel={con_cho:'Còn chỗ',sap_het:'Sắp hết',het_cho:'Hết chỗ'};
+const ttThanhToanLabel={chua_thanh_toan:'Chưa thanh toán',thanh_toan_mot_phan:'Thanh toán một phần',da_thanh_toan:'Đã thanh toán',can_hoan_tien:'Cần hoàn tiền',khong_phat_sinh:'—'};
+const vaiTroLabel={ADMIN:'Quản trị viên',DIEU_HANH:'Điều hành tour',CSKH:'Chăm sóc khách hàng',KE_TOAN:'Kế toán'};
 
 let route={view:'home',params:{}};
 function nav(view,params){route={view,params:params||{}};render();window.scrollTo({top:0,behavior:'smooth'});}
 function toggleMenu(){const m=document.getElementById('userMenu');if(m)m.style.display=m.style.display==='none'?'block':'none';}
 function logout(){clearSession();nav('home');}
+function val(id){return document.getElementById(id).value.trim();}
 
 /* ================= HEADER / FOOTER ================= */
 function siteHeader(active){
- const links=[['home','Trang chủ'],['list-trongnuoc','Tour trong nước'],['list-nuocngoai','Tour nước ngoài'],['blog','Blog'],['contact','Liên hệ']];
+ const links=[['home','Trang chủ'],['list-trong_nuoc','Tour trong nước'],['list-nuoc_ngoai','Tour nước ngoài'],['contact','Liên hệ']];
  const user=getUser();
  let authArea;
  if(!user){
    authArea=`<button class="btn outline sm" onclick="nav('login')">Đăng nhập</button><button class="btn primary sm" onclick="nav('register')">Đăng ký</button>`;
  }else{
    const label = user.role==='employee' ? 'AD' : (user.name||'KH').split(' ').slice(-1)[0][0]+'K';
-   authArea=`
-   <div class="icon-circle" onclick="toggleSearchBox()">🔍</div>
-   <div style="position:relative">
-    <div class="icon-circle" onclick="toggleNotif()">🔔<span class="dot"></span></div>
-    <div class="dropdown notif-list" id="notifBox" style="display:none;width:260px">
-     <a>📦 Đơn đặt tour của bạn đang được xử lý.</a>
-     <a>🎉 Ưu đãi mới: giảm 10% tour Phú Quốc tháng này.</a>
-     <a>✅ Cảm ơn bạn đã đồng hành cùng TravelGo!</a>
-    </div>
-   </div>
-   <div class="avatar" onclick="toggleMenu()">${label}</div>
+   authArea=`<div class="avatar" onclick="toggleMenu()">${label}</div>
    <div class="dropdown" id="userMenu" style="display:none">
      ${user.role==='customer'?`<a onclick="nav('account',{sub:'orders'})">Tài khoản của tôi</a>`:''}
      ${user.role==='employee'?`<a onclick="nav('admin-dash')">Trang quản trị</a>`:''}
@@ -189,39 +211,30 @@ function siteHeader(active){
   <div class="logo" onclick="nav('home')"><span class="plane">✈</span><div>TravelGo<span>Khám phá thế giới cùng bạn</span></div></div>
   <nav class="cust-nav">${links.map(l=>`<a class="${l[0]===active?'active':''}" onclick="nav('${l[0]}')">${l[1]}</a>`).join('')}</nav>
   <div class="actions">${authArea}</div>
-  <div class="dropdown" id="searchBox" style="display:none;top:54px;right:70px;width:260px;padding:10px">
-   <input id="headerSearch" placeholder="Tìm tour..." style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px" onkeydown="if(event.key==='Enter')headerDoSearch()">
-  </div>
  </header>`;
 }
-function toggleNotif(){const m=document.getElementById('notifBox');if(m)m.style.display=m.style.display==='none'?'block':'none';}
-function toggleSearchBox(){const m=document.getElementById('searchBox');if(m){m.style.display=m.style.display==='none'?'block':'none'; if(m.style.display==='block') document.getElementById('headerSearch').focus();}}
-function headerDoSearch(){const kw=document.getElementById('headerSearch').value;nav('search',{kw});}
 function siteFooter(){return `<footer class="site">© 2026 TravelGo — Công ty Du lịch TravelGo · Hotline hỗ trợ: 1900 1900</footer>`;}
-function starsHtml(rating){
- const full=Math.round(rating||0);
- return `<span class="stars">${'★'.repeat(full)}${'☆'.repeat(5-full)}</span>`;
-}
+
 function tourCard(t,i){
- return `<div class="tour-card" onclick="nav('detail',{id:'${t.id}'})">
-  <div class="tour-thumb" style="background:${grad(i)}"><span class="pill">${t.region==='trongnuoc'?'Tour trong nước':'Tour nước ngoài'}</span>
-   ${t.discountPercent?`<span class="pill" style="left:auto;right:8px;background:var(--danger);color:#fff">-${t.discountPercent}%</span>`:''}</div>
-  <div class="body"><h4>${t.name}</h4><div class="meta">🗓 ${t.duration} · Còn ${t.seats} chỗ</div>
-  ${t.reviewCount?`<div class="meta">${starsHtml(t.rating)} ${t.rating}/5 (${t.reviewCount}) · ${t.bookedCount} khách đã đặt</div>`:`<div class="meta">${t.bookedCount||0} khách đã đặt</div>`}
-  <div class="price">${fmt(t.cost)}${t.old_cost?`<span class="old">${fmt(t.old_cost)}</span>`:''}</div></div></div>`;
+ const kh=t.khoi_hanh_gan_nhat;
+ return `<div class="tour-card" onclick="nav('detail',{id:'${t.ma_tour}'})">
+  <div class="tour-thumb" style="background:${grad(i)}"><span class="pill">${t.khu_vuc==='trong_nuoc'?'Tour trong nước':'Tour nước ngoài'}</span>
+   ${kh&&kh.phan_tram_giam?`<span class="pill" style="left:auto;right:8px;background:var(--danger);color:#fff">-${kh.phan_tram_giam}%</span>`:''}</div>
+  <div class="body"><h4>${t.ten_tour}</h4><div class="meta">🗓 ${t.so_ngay} ngày ${t.so_dem} đêm ${kh?('· Còn '+kh.cho_con+' chỗ'):''}</div>
+  ${t.so_danh_gia?`<div class="meta">${starsHtml(t.diem_danh_gia)} ${t.diem_danh_gia}/5 (${t.so_danh_gia}) · ${t.da_dat} khách đã đặt</div>`:`<div class="meta">${t.da_dat||0} khách đã đặt</div>`}
+  <div class="price">${kh?fmt(kh.gia_nguoi_lon):'Liên hệ'}${kh&&kh.gia_goc?`<span class="old">${fmt(kh.gia_goc)}</span>`:''}</div></div></div>`;
 }
 
-/* ================= SITE VIEWS ================= */
+/* ================= TRANG CHỦ / DANH SÁCH / CHI TIẾT ================= */
 async function Home(){
  const tours=await api('/tours');
  return `${siteHeader('home')}
  <section class="hero"><div class="wrap" style="padding:0">
   <h1>Khám phá thế giới<br>cùng TravelGo</h1>
   <p>Những hành trình tuyệt vời đang chờ bạn — đặt tour và thanh toán trực tuyến chỉ trong vài phút.</p>
-  <div class="search-bar" style="max-width:820px">
+  <div class="search-bar" style="max-width:600px">
     <div class="seg"><small>Điểm đến</small><input id="qKeyword" placeholder="Nhập điểm đến..."></div>
-    <div class="seg"><small>Khoảng giá</small><select id="qPrice"><option value="">Tất cả mức giá</option><option value="0-5000000">Dưới 5 triệu</option><option value="5000000-10000000">5 - 10 triệu</option><option value="10000000-999000000">Trên 10 triệu</option></select></div>
-    <button onclick="doSearch()">Tìm kiếm</button>
+    <button onclick="nav('search',{kw:document.getElementById('qKeyword').value})">Tìm kiếm</button>
   </div></div></section>
  <div class="wrap" style="padding:20px 24px 0">
   <div class="grid g4">
@@ -233,129 +246,135 @@ async function Home(){
  </div>
  <div class="wrap" style="padding:28px 24px 32px">
   <h2 style="font-size:20px">Tour nổi bật</h2>
-  <div class="grid g4">${tours.slice(0,4).map(tourCard).join('')}</div>
-  <h2 style="font-size:20px;margin-top:32px">Tour trong nước / nước ngoài</h2>
   <div class="grid g4">${tours.map(tourCard).join('')}</div>
-  <div class="card" style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(120deg,#123B7A,#2F6FD6);color:#fff;flex-wrap:wrap;gap:14px">
-    <div><h2 style="margin:0 0 6px;color:#fff">Sẵn sàng cho chuyến đi tiếp theo?</h2><p style="margin:0;opacity:.85">Đăng ký ngay để nhận ưu đãi cho lần đặt tour đầu tiên.</p></div>
-    <button class="btn" style="background:#fff;color:var(--blue)" onclick="nav('register')">Đặt tour ngay</button>
-  </div>
  </div>${siteFooter()}`;
 }
-function doSearch(){
- const kw=document.getElementById('qKeyword').value||'';
- const priceRange=document.getElementById('qPrice').value||'';
- nav('search',{kw,priceRange});
-}
 async function SearchResult(p){
- let q=`?keyword=${encodeURIComponent(p.kw||'')}`;
- if(p.priceRange){const [min,max]=p.priceRange.split('-');q+=`&minPrice=${min}&maxPrice=${max}`;}
- const tours=await api('/tours'+q);
+ const tours=await api('/tours?keyword='+encodeURIComponent(p.kw||''));
  return `${siteHeader('')}<div class="wrap" style="padding:28px 24px">
   <h2>Kết quả tìm kiếm ${p.kw?`cho "${p.kw}"`:''}</h2>
   <div class="grid g4">${tours.length?tours.map(tourCard).join(''):'<p style="color:var(--muted)">Không tìm thấy tour phù hợp.</p>'}</div>
  </div>${siteFooter()}`;
 }
-async function TourListView(region){
- const tours=await api('/tours?region='+region);
- return `${siteHeader('list-'+region)}<div class="wrap" style="padding:28px 24px">
-  <h2>${region==='trongnuoc'?'Tour trong nước':'Tour nước ngoài'}</h2>
-  <p style="color:var(--muted);margin-top:-6px">Tìm thấy ${tours.length} tour</p>
-  <div class="grid g4">${tours.map(tourCard).join('')}</div>
- </div>${siteFooter()}`;
-}
-async function TourDetail(p){
- const t=await api('/tours/'+p.id);
- return `${siteHeader('')}<div class="wrap" style="padding:28px 24px">
-  <a onclick="nav('home')" style="color:var(--blue);font-size:13px;font-weight:600">← Quay lại</a>
-  <div class="grid g2" style="grid-template-columns:2fr 1fr;margin-top:14px;align-items:start">
-   <div>
-    <div class="tour-thumb" style="background:${grad(0)};height:260px;border-radius:12px"></div>
-    <h1 style="margin:18px 0 6px">${t.name}</h1>
-    <p style="color:var(--muted);margin:0 0 4px">${starsHtml(t.rating)} ${t.rating||0}/5 (${t.reviewCount} đánh giá) · Đã đặt ${t.bookedCount}+ lượt</p>
-    <p style="color:var(--muted);margin:0 0 16px">🗓 ${t.duration} · Khởi hành từ ${t.from_place} · Còn ${t.seats} chỗ
-     ${t.old_cost?`· <span style="color:var(--danger);font-weight:700">-${t.discountPercent}%</span>`:''}</p>
-    <div class="tabs-row" id="tdTabs">
-     <button class="active" onclick="tdSwitch('schedule',this)">Lịch trình</button>
-     <button onclick="tdSwitch('price',this)">Giá & Dịch vụ</button>
-     <button onclick="tdSwitch('terms',this)">Điều khoản</button>
-     <button onclick="tdSwitch('reviews',this)">Đánh giá (${t.reviewCount})</button>
-    </div>
-    <div id="tdPane-schedule"><div class="card">${t.schedule.map(s=>`<p style="font-size:14px;margin:8px 0">${s}</p>`).join('')}</div></div>
-    <div id="tdPane-price" style="display:none"><div class="card">
-     <p style="font-size:14px">Giá tour <b>${fmt(t.cost)}</b>/khách đã bao gồm: xe/vé di chuyển, khách sạn theo lựa chọn, hướng dẫn viên, bảo hiểm du lịch.</p>
-     <p style="font-size:14px;color:var(--muted)">Chưa bao gồm: chi phí cá nhân, ăn uống ngoài chương trình, tip hướng dẫn viên/tài xế.</p>
-    </div></div>
-    <div id="tdPane-terms" style="display:none"><div class="card">
-     <p style="font-size:14px">• Chỉ được đặt tour khi ngày khởi hành cách ngày đăng ký tối thiểu <b>15 ngày</b>.</p>
-     <p style="font-size:14px">• Tour đã thanh toán <b>không được hủy</b>; chỉ có thể yêu cầu đổi tour.</p>
-     <p style="font-size:14px">• Đổi tour: trong 5 ngày sau khi đặt và trước 7 ngày so với ngày khởi hành tour mới, chỉ đổi được 1 lần.</p>
-    </div></div>
-    <div id="tdPane-reviews" style="display:none"></div>
-   </div>
+window.__khuVuc=null;
+async function TourListView(khuVuc){
+ window.__khuVuc=khuVuc;
+ const tours=await api('/tours?khu_vuc='+khuVuc);
+ const diemDiList=[...new Set(tours.map(t=>t.diem_di).filter(Boolean))];
+ const diemDenList=[...new Set(tours.map(t=>t.diem_den).filter(Boolean))];
+ const vehicleList=[...new Set(tours.map(t=>t.phuong_tien_chinh).filter(Boolean))];
+ return `${siteHeader('list-'+khuVuc)}<div class="wrap" style="padding:28px 24px">
+  <h2 style="margin-bottom:4px">${khuVuc==='trong_nuoc'?'Tour trong nước':'Tour nước ngoài'}</h2>
+  <div class="grid g2" style="grid-template-columns:240px 1fr;align-items:start;gap:20px">
    <div class="card">
-    <h3 style="margin-top:0">Đặt tour ngay</h3>
-    <div id="bookMsg"></div>
-    <div class="field"><label>Ngày khởi hành</label><input type="date" id="bDate" value="${t.depart_date}"></div>
-    <div class="field"><label>Số người lớn</label><input type="number" id="bAdult" value="2" min="1"></div>
-    <div class="field"><label>Trẻ em (2–11 tuổi)</label><input type="number" id="bChild" value="0" min="0"></div>
-    <div class="field"><label>Phương tiện</label><select id="bVehicle"><option>Xe khách</option><option>Máy bay</option><option>Tàu hỏa</option></select></div>
-    <div class="field"><label>Khách sạn</label><select id="bHotel"><option>3 sao</option><option>4 sao</option><option>5 sao</option></select></div>
-    <div class="rule-note">Chỉ được đặt tour khi ngày khởi hành cách hôm nay tối thiểu <b>15 ngày</b>.</div>
-    <div style="font-weight:700;font-size:18px;color:var(--blue);margin-bottom:10px">${fmt(t.cost)} / khách</div>
-    <button class="btn primary" style="width:100%" onclick="submitBooking('${t.id}')">Đặt ngay</button>
+    <h3 style="margin-top:0;font-size:15px">Bộ lọc tìm kiếm</h3>
+    <div class="field"><label>Điểm khởi hành</label><select id="flDiemDi"><option value="">Tất cả</option>${diemDiList.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="field"><label>Điểm đến</label><select id="flDiemDen"><option value="">Tất cả</option>${diemDenList.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="field"><label>Ngày khởi hành</label><input type="date" id="flDate"></div>
+    <div class="field"><label>Khoảng giá</label><select id="flPrice">
+      <option value="">Tất cả mức giá</option>
+      <option value="0-5000000">Dưới 5 triệu</option>
+      <option value="5000000-10000000">5 - 10 triệu</option>
+      <option value="10000000-999000000">Trên 10 triệu</option>
+     </select></div>
+    <div class="field"><label>Phương tiện</label><select id="flVehicle"><option value="">Tất cả</option>${vehicleList.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <button class="btn primary" style="width:100%" onclick="applyTourListFilter()">Áp dụng</button>
+    <button class="btn outline" style="width:100%;margin-top:8px" onclick="nav('list-'+window.__khuVuc)">Xóa lọc</button>
+   </div>
+   <div>
+    <p style="color:var(--muted);margin:0 0 12px" id="flCount">Tìm thấy ${tours.length} tour</p>
+    <div class="grid g3" id="flResults">${tours.map(tourCard).join('')}</div>
    </div>
   </div>
  </div>${siteFooter()}`;
 }
+async function applyTourListFilter(){
+ const q=new URLSearchParams();
+ q.set('khu_vuc',window.__khuVuc);
+ if(val('flDiemDi')) q.set('diem_di',val('flDiemDi'));
+ if(val('flDiemDen')) q.set('diem_den',val('flDiemDen'));
+ if(val('flDate')) q.set('ngay_khoi_hanh',val('flDate'));
+ if(val('flVehicle')) q.set('phuong_tien',val('flVehicle'));
+ const priceRange=document.getElementById('flPrice').value;
+ if(priceRange){ const [min,max]=priceRange.split('-'); q.set('minPrice',min); q.set('maxPrice',max); }
+ const tours=await api('/tours?'+q.toString());
+ document.getElementById('flResults').innerHTML=tours.map(tourCard).join('')||'<p style="color:var(--muted)">Không tìm thấy tour phù hợp.</p>';
+ document.getElementById('flCount').textContent='Tìm thấy '+tours.length+' tour';
+}
+let selectedKH=null;
+async function TourDetail(p){
+ const t=await api('/tours/'+p.id);
+ selectedKH = t.khoi_hanh_gan_nhat ? t.khoi_hanh_gan_nhat.ma_khoi_hanh : null;
+ window.__tour=t;
+ return `${siteHeader('')}<div class="wrap" style="padding:28px 24px">
+  <a onclick="nav('home')" style="color:var(--blue);font-size:13px;font-weight:600">← Quay lại</a>
+  <div class="grid g2" style="grid-template-columns:2fr 1fr;margin-top:14px;align-items:start">
+   <div>
+    <div class="tour-thumb" style="background:${grad(0)};height:240px;border-radius:12px"></div>
+    <h1 style="margin:18px 0 6px">${t.ten_tour}</h1>
+    <p style="color:var(--muted);margin:0 0 4px">${starsHtml(t.diem_danh_gia)} ${t.diem_danh_gia}/5 (${t.so_danh_gia} đánh giá) · Đã đặt ${t.da_dat}+ lượt</p>
+    <p style="color:var(--muted);margin:0 0 16px">🗓 ${t.so_ngay} ngày ${t.so_dem} đêm · Khởi hành từ ${t.diem_di} · ${t.phuong_tien_chinh||''}</p>
+    <div class="tabs-row" id="tdTabs">
+     <button class="active" onclick="tdSwitch('schedule',this)">Lịch trình</button>
+     <button onclick="tdSwitch('service',this)">Dịch vụ</button>
+     <button onclick="tdSwitch('terms',this)">Điều khoản</button>
+     <button onclick="tdSwitch('reviews',this)">Đánh giá (${t.so_danh_gia})</button>
+    </div>
+    <div id="tdPane-schedule"><div class="card">${t.lich_trinh.map(s=>`<p style="font-size:14px;margin:8px 0"><b>${s.tieu_de}:</b> ${s.noi_dung}</p>`).join('')}</div></div>
+    <div id="tdPane-service" style="display:none"><div class="card">${t.dich_vu.map(d=>`<p style="font-size:14px;margin:6px 0">${d.bao_gom?'✅':'❌'} ${d.ten_dich_vu}</p>`).join('')||'<p style="color:var(--muted)">Chưa có thông tin dịch vụ.</p>'}</div></div>
+    <div id="tdPane-terms" style="display:none"><div class="card">
+     <p style="font-size:14px">${t.dieu_khoan||''}</p><p style="font-size:14px;color:var(--muted)">${t.luu_y||''}</p>
+     <p style="font-size:13px;color:var(--muted);margin-top:10px">Lưu ý: tour chỉ được đổi 1 lần, trong 5 ngày sau khi đặt và khởi hành mới phải cách ngày đổi tối thiểu 7 ngày. Việc đổi tour do nhân viên TravelGo thực hiện khi bạn liên hệ hỗ trợ.</p>
+    </div></div>
+    <div id="tdPane-reviews" style="display:none"></div>
+   </div>
+   <div class="card">
+    <h3 style="margin-top:0">Chọn khởi hành</h3>
+    <div id="khList">${t.khoi_hanh.filter(k=>k.trang_thai==='mo_ban').map(k=>`
+     <div class="kh-card ${k.ma_khoi_hanh===selectedKH?'sel':''}" onclick="selectKhoiHanh('${k.ma_khoi_hanh}')">
+      <div class="info"><b>${k.ngay_khoi_hanh} · ${k.gio_khoi_hanh}</b><span>${choLabel[k.trang_thai_cho]} (còn ${k.cho_con})</span></div>
+      <div class="price">${fmt(k.gia_nguoi_lon)}<br><span style="font-size:11px;color:var(--muted);font-weight:500">trẻ em ${fmt(k.gia_tre_em)}</span></div>
+     </div>`).join('')||'<p style="color:var(--muted);font-size:13px">Hiện chưa có lịch khởi hành mở bán.</p>'}</div>
+    <div id="bookMsg"></div>
+    <div class="field"><label>Số người lớn</label><input type="number" id="bAdult" value="2" min="1"></div>
+    <div class="field"><label>Trẻ em (dưới 12 tuổi)</label><input type="number" id="bChild" value="0" min="0"></div>
+    <div class="field"><label>Phương tiện</label><select id="bVehicle"><option value="">-- Không chọn --</option>${t.dich_vu.filter(d=>d.loai==='phuong_tien').map(d=>`<option value="${d.ma_dich_vu}">${d.ten_dich_vu}</option>`).join('')}</select></div>
+    <div class="field"><label>Khách sạn</label><select id="bHotel"><option value="">-- Không chọn --</option>${t.dich_vu.filter(d=>d.loai==='khach_san').map(d=>`<option value="${d.ma_dich_vu}">${d.ten_dich_vu}</option>`).join('')}</select></div>
+    <button class="btn primary" style="width:100%" onclick="submitBooking('${t.ma_tour}')">Đặt ngay</button>
+   </div>
+  </div>
+ </div>${siteFooter()}`;
+}
+function selectKhoiHanh(id){ selectedKH=id; document.querySelectorAll('.kh-card').forEach(c=>c.classList.remove('sel')); event.currentTarget.classList.add('sel'); }
 function tdSwitch(name,btn){
  document.querySelectorAll('#tdTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
- ['schedule','price','terms','reviews'].forEach(k=>{const el=document.getElementById('tdPane-'+k); if(el) el.style.display = k===name?'block':'none';});
+ ['schedule','service','terms','reviews'].forEach(k=>{const el=document.getElementById('tdPane-'+k); if(el) el.style.display = k===name?'block':'none';});
  if(name==='reviews') loadReviews();
 }
 async function loadReviews(){
  const tourId=route.params.id;
  const pane=document.getElementById('tdPane-reviews');
  pane.innerHTML='<div class="loading">Đang tải đánh giá...</div>';
- const data=await api('/tours/'+tourId+'/reviews');
- const user=getUser();
+ const data=await api('/tours/'+tourId+'/danh-gia');
  pane.innerHTML=`<div class="card">
-  <p style="font-weight:700;font-size:16px">${starsHtml(data.average)} ${data.average}/5 · ${data.count} đánh giá</p>
-  ${data.reviews.map(r=>`<div class="review-item"><b>${r.reviewer_name}</b> ${starsHtml(r.rating)}<p style="font-size:13.5px;color:#3a4152;margin:4px 0 0">${r.comment||''}</p></div>`).join('')||'<p style="color:var(--muted)">Chưa có đánh giá nào cho tour này.</p>'}
-  <div id="writeReviewBox" style="margin-top:14px"></div>
+  <p style="font-weight:700;font-size:16px">${starsHtml(data.diem_tb)} ${data.diem_tb}/5 · ${data.so_danh_gia} đánh giá</p>
+  ${data.danh_gia.map(r=>`<div style="border-bottom:1px solid var(--border);padding:10px 0"><b>${r.ho_ten}</b> ${starsHtml(r.so_sao)}<p style="font-size:13.5px;margin:4px 0 0">${r.noi_dung||''}</p></div>`).join('')||'<p style="color:var(--muted)">Chưa có đánh giá nào cho tour này.</p>'}
  </div>`;
- if(user&&user.role==='customer'){
-  document.getElementById('writeReviewBox').innerHTML=`<button class="btn outline sm" onclick="showReviewForm('${tourId}')">Viết đánh giá</button><div id="reviewFormBox"></div>`;
- }
-}
-function showReviewForm(tourId){
- document.getElementById('reviewFormBox').innerHTML=`<div style="margin-top:10px">
-  <div id="revMsg"></div>
-  <div class="star-input" id="starInput">${[1,2,3,4,5].map(n=>`<span data-v="${n}" onclick="setStar(${n})">★</span>`).join('')}</div>
-  <textarea id="revComment" rows="2" placeholder="Cảm nhận của bạn về tour..." style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:8px"></textarea>
-  <button class="btn primary sm" onclick="submitReview('${tourId}')">Gửi đánh giá</button>
- </div>`;
-}
-let selectedStar=5;
-function setStar(n){ selectedStar=n; document.querySelectorAll('#starInput span').forEach(s=>s.classList.toggle('sel', +s.dataset.v<=n)); }
-async function submitReview(tourId){
- try{
-  await api('/tours/'+tourId+'/reviews',{method:'POST',body:JSON.stringify({rating:selectedStar,comment:document.getElementById('revComment').value})});
-  loadReviews();
- }catch(e){ document.getElementById('revMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
 async function submitBooking(tourId){
  const msg=document.getElementById('bookMsg');
  const user=getUser();
  if(!user||user.role!=='customer'){ msg.innerHTML=`<div class="msg err">Vui lòng đăng nhập bằng tài khoản khách hàng để đặt tour.</div>`; return; }
- const body={tourId,adults:parseInt(document.getElementById('bAdult').value||'0'),children:parseInt(document.getElementById('bChild').value||'0'),
-  vehicle:document.getElementById('bVehicle').value,hotel:document.getElementById('bHotel').value,departDate:document.getElementById('bDate').value};
+ if(!selectedKH){ msg.innerHTML=`<div class="msg err">Vui lòng chọn một lịch khởi hành.</div>`; return; }
+ const body={ma_khoi_hanh:selectedKH,so_nguoi_lon:parseInt(document.getElementById('bAdult').value||'0'),so_tre_em:parseInt(document.getElementById('bChild').value||'0'),
+  ma_phuong_tien:document.getElementById('bVehicle').value||null,ma_khach_san:document.getElementById('bHotel').value||null};
  try{
   const b=await api('/bookings',{method:'POST',body:JSON.stringify(body)});
-  nav('account',{sub:'orderDetail',bookingId:b.id});
+  nav('account',{sub:'orderDetail',bookingId:b.so_phieu_dang_ky});
  }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
 
+/* ================= ĐĂNG NHẬP / ĐĂNG KÝ ================= */
 function Login(){
  return `${siteHeader('')}<div class="auth-wrap"><div class="auth-card">
   <div class="logo"><span class="plane">✈</span>TravelGo</div><h2>Đăng nhập</h2><div class="sub">Vui lòng đăng nhập để tiếp tục</div>
@@ -380,7 +399,7 @@ function Register(){
   <div class="logo"><span class="plane">✈</span>TravelGo</div><h2>Đăng ký tài khoản</h2><div class="sub">Tạo tài khoản để trải nghiệm nhiều ưu đãi hấp dẫn</div>
   <div id="regMsg"></div>
   <div class="field"><label>Họ và tên</label><input id="rName"></div>
-  <div class="field"><label>Số CCCD</label><input id="rCccd"></div>
+  <div class="field"><label>Số CCCD (12 chữ số)</label><input id="rCccd" maxlength="12"></div>
   <div class="field"><label>Email</label><input id="rEmail"></div>
   <div class="field"><label>Số điện thoại</label><input id="rPhone"></div>
   <div class="field"><label>Mật khẩu</label><input id="rPass" type="password"></div>
@@ -399,43 +418,46 @@ async function doRegister(){
   setSession(r.token,r.user); nav('account',{sub:'orders'});
  }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
-function val(id){return document.getElementById(id).value.trim();}
 
-/* ---------- Account ---------- */
+/* ================= TÀI KHOẢN KHÁCH HÀNG ================= */
 async function Account(p){
  const sub=p.sub||'orders';
- const sideItems=[['orders','🧾 Đơn đặt tour'],['profile','👤 Trang cá nhân'],['support','💬 Yêu cầu hỗ trợ'],['password','🔑 Đổi mật khẩu']];
+ const sideItems=[['orders','🧾 Đơn đặt tour'],['profile','👤 Thông tin cá nhân'],['reviews','⭐ Đánh giá của tôi']];
  let content='';
  if(sub==='orderDetail') content=await OrderDetail(p.bookingId);
  else if(sub==='orders') content=await OrdersList();
  else if(sub==='profile') content=await Profile();
- else if(sub==='password') content=`<h2 style="margin-top:0">Đổi mật khẩu</h2><p style="color:var(--muted);font-size:13px">Tính năng đổi mật khẩu sẽ được bật khi kết nối SMTP xác thực email thật.</p>`;
- else if(sub==='support') content=`<h2 style="margin-top:0">Yêu cầu hỗ trợ</h2><p style="color:var(--muted)">Gọi hotline <b>1900 1900</b> để được hỗ trợ trực tiếp.</p>`;
+ else if(sub==='reviews') content=await MyReviews();
  return `${siteHeader('')}<div class="wrap" style="padding:26px 24px"><div class="side-shell">
   <aside class="side">${sideItems.map(x=>`<a class="${x[0]===sub?'active':''}" onclick="nav('account',{sub:'${x[0]}'})">${x[1]}</a>`).join('')}<a onclick="logout()">🚪 Đăng xuất</a></aside>
   <div class="side-content">${content}</div>
  </div></div>${siteFooter()}`;
 }
 async function Profile(){
- const c=await api('/customers/me');
- return `<h2 style="margin-top:0">Trang cá nhân</h2>
+ const c=await api('/khach-hang/me');
+ return `<h2 style="margin-top:0">Thông tin cá nhân</h2>
  <div class="grid g2">
-  <div class="field"><label>Họ tên</label><input id="pName" value="${c.name}"></div>
-  <div class="field"><label>Số CCCD</label><input value="${c.cccd}" disabled></div>
+  <div class="field"><label>Họ tên</label><input id="pName" value="${c.ho_ten}"></div>
+  <div class="field"><label>Số CCCD</label><input value="${c.so_cccd}" disabled></div>
   <div class="field"><label>Email</label><input id="pEmail" value="${c.email}"></div>
-  <div class="field"><label>Số điện thoại</label><input id="pPhone" value="${c.phone}"></div>
+  <div class="field"><label>Số điện thoại</label><input id="pPhone" value="${c.sdt}"></div>
  </div><div id="pMsg"></div><button class="btn primary" onclick="saveProfile()">Lưu thay đổi</button>`;
 }
 async function saveProfile(){
- try{ await api('/customers/me',{method:'PUT',body:JSON.stringify({name:val('pName'),email:val('pEmail'),phone:val('pPhone')})});
+ try{ await api('/khach-hang/me',{method:'PUT',body:JSON.stringify({ho_ten:val('pName'),email:val('pEmail'),sdt:val('pPhone')})});
   document.getElementById('pMsg').innerHTML=`<div class="msg">Đã lưu thay đổi.</div>`;
  }catch(e){ document.getElementById('pMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function MyReviews(){
+ const rows=await api('/danh-gia/mine');
+ return `<h2 style="margin-top:0">Đánh giá của tôi</h2>
+ ${rows.map(r=>`<div class="card" style="margin-bottom:10px"><b>${r.ten_tour}</b> ${starsHtml(r.so_sao)}<p style="font-size:13.5px;margin:6px 0 0">${r.noi_dung||''}</p></div>`).join('')||'<p style="color:var(--muted)">Bạn chưa có đánh giá nào. Hãy đánh giá sau khi hoàn thành một tour!</p>'}`;
 }
 let ordersFilter='all';
 async function OrdersList(){
  const mine=await api('/bookings/mine');
- const tabs=[['all','Tất cả'],['wait','Chờ xác nhận'],['confirmed','Đã xác nhận'],['paid','Đã thanh toán'],['cancelled','Đã hủy']];
- const filtered= ordersFilter==='all' ? mine : mine.filter(b=>b.status===ordersFilter);
+ const tabs=[['all','Tất cả'],['cho_xac_nhan','Chờ xác nhận'],['da_xac_nhan','Đã xác nhận'],['hoan_thanh','Hoàn thành'],['da_huy','Đã hủy']];
+ const filtered= ordersFilter==='all' ? mine : mine.filter(b=>b.trang_thai===ordersFilter);
  return `<h2 style="margin-top:0">Đơn đặt tour</h2>
  <div class="status-tabs" id="orderTabs">${tabs.map(t=>`<button class="${t[0]===ordersFilter?'active':''}" onclick="filterOrders('${t[0]}',this)">${t[1]}</button>`).join('')}</div>
  <div id="ordersListBox">${renderOrdersRows(filtered)}</div>`;
@@ -443,304 +465,324 @@ async function OrdersList(){
 function renderOrdersRows(rows){
  if(!rows.length) return '<p style="color:var(--muted)">Không có đơn nào ở trạng thái này.</p>';
  return rows.map((b,i)=>`<div class="order-row"><div class="order-thumb" style="background:${grad(i)}"></div>
- <div class="info"><h4>${b.tour.name}</h4><div class="meta">Ngày đi: ${b.depart_date} · ${b.adults} người lớn${b.children?`, ${b.children} trẻ em`:''} · ${fmt(b.total)}</div></div>
- <span class="badge ${b.status}">${statusLabel[b.status]}</span>
- <button class="btn outline sm" onclick="nav('account',{sub:'orderDetail',bookingId:'${b.id}'})">Xem chi tiết</button></div>`).join('');
+ <div class="info"><h4>${b.tour.ten_tour}</h4><div class="meta">Khởi hành: ${b.khoi_hanh.ngay_khoi_hanh} · ${b.so_nguoi_lon} người lớn${b.so_tre_em?`, ${b.so_tre_em} trẻ em`:''} · ${fmt(b.tong_tien)}</div></div>
+ <span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span>
+ <button class="btn outline sm" onclick="nav('account',{sub:'orderDetail',bookingId:'${b.so_phieu_dang_ky}'})">Xem chi tiết</button></div>`).join('');
 }
 async function filterOrders(status,btn){
  ordersFilter=status;
  document.querySelectorAll('#orderTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
  const mine=await api('/bookings/mine');
- const filtered= status==='all' ? mine : mine.filter(b=>b.status===status);
- document.getElementById('ordersListBox').innerHTML=renderOrdersRows(filtered);
+ document.getElementById('ordersListBox').innerHTML=renderOrdersRows(status==='all'?mine:mine.filter(b=>b.trang_thai===status));
 }
 async function OrderDetail(bookingId){
  const b=await api('/bookings/'+bookingId);
- const canPay = b.status==='wait'||b.status==='confirmed';
+ const needMore = b.so_nguoi_lon + b.so_tre_em - b.hanh_khach.length;
  return `<a onclick="nav('account',{sub:'orders'})" style="color:var(--blue);font-size:13px;font-weight:600">← Quay lại đơn đặt tour</a>
- <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0"><h2 style="margin:0">Chi tiết đơn — ${b.id}</h2><span class="badge ${b.status}">${statusLabel[b.status]}</span></div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0"><h2 style="margin:0">Chi tiết đơn — ${b.so_phieu_dang_ky}</h2><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></div>
  <div id="odMsg"></div>
- <div class="rule-note">Tour đã thanh toán sẽ <b>không thể hủy</b>. Cần thay đổi? Dùng "Yêu cầu đổi tour" (trong 5 ngày sau khi đặt và trước 7 ngày so với ngày khởi hành tour mới, chỉ 1 lần).</div>
- <p style="font-size:13.5px"><b>Tour:</b> ${b.tour.name}<br><b>Ngày khởi hành:</b> ${b.depart_date} · <b>Số lượng:</b> ${b.adults} người lớn${b.children?`, ${b.children} trẻ em`:''}<br><b>Tổng tiền:</b> ${fmt(b.total)}</p>
- ${canPay?`
-  <div class="field" style="max-width:260px"><label>Phương thức thanh toán</label>
-   <select id="payMethod"><option>Ví điện tử</option><option>Thẻ ATM</option><option>Chuyển khoản</option><option>Tiền mặt</option></select></div>
-  <div class="qr"></div>
-  <button class="btn primary sm" onclick="payBooking('${b.id}')">Xác nhận đã quét & thanh toán</button>
-  <button class="btn outline sm" onclick="cancelBooking('${b.id}')">Hủy đơn</button>`:''}
- ${b.status==='paid'&&!b.changed?`<button class="btn outline sm" onclick="showChangeForm('${b.id}','${b.tour_id}')">Yêu cầu đổi tour</button>`:''}
- ${b.status==='paid'&&b.changed?`<p style="font-size:12.5px;color:var(--muted)">Đơn này đã sử dụng quyền đổi tour.</p>`:''}
- ${b.status==='cancelled'?`<p style="font-size:12.5px;color:var(--muted)">Đơn này đã bị hủy.</p>`:''}
- <div id="changeFormBox"></div>`;
+ <p style="font-size:13.5px"><b>Tour:</b> ${b.tour.ten_tour}<br><b>Khởi hành:</b> ${b.khoi_hanh.ngay_khoi_hanh} ${b.khoi_hanh.gio_khoi_hanh}<br>
+ <b>Số lượng:</b> ${b.so_nguoi_lon} người lớn${b.so_tre_em?`, ${b.so_tre_em} trẻ em`:''} · <b>Tổng tiền:</b> ${fmt(b.tong_tien)}</p>
+
+ ${b.trang_thai==='cho_xac_nhan'?`
+ <div class="rule-note">Vui lòng nhập đầy đủ thông tin hành khách (khớp đúng số người lớn/trẻ em) để nhân viên có thể xác nhận đơn.</div>
+ <h4>Danh sách hành khách (${b.hanh_khach.length}/${b.so_nguoi_lon + b.so_tre_em})</h4>
+ ${b.hanh_khach.map(h=>`<div class="passenger-row"><span>${h.ho_ten} ${h.la_tre_em?'(trẻ em)':'(người lớn)'}</span><button class="btn sm outline" onclick="removePassenger('${b.so_phieu_dang_ky}',${h.ma_hanh_khach})">Xóa</button></div>`).join('')}
+ ${needMore>0?`<div class="field" style="margin-top:10px"><label>Thêm hành khách</label>
+   <div class="grid g2"><input id="hkName" placeholder="Họ tên"><select id="hkType"><option value="0">Người lớn</option><option value="1">Trẻ em</option></select></div>
+   <button class="btn outline sm" style="margin-top:8px" onclick="addPassenger('${b.so_phieu_dang_ky}')">+ Thêm</button></div>`:''}
+ `:''}
+
+ ${b.hoa_don?`
+ <div class="card" style="margin-top:14px"><h4 style="margin-top:0">Thanh toán</h4>
+  <p style="font-size:13.5px">Trạng thái: <span class="badge ${b.cong_no.trang_thai_thanh_toan}">${ttThanhToanLabel[b.cong_no.trang_thai_thanh_toan]}</span><br>
+  Đã thanh toán: ${fmt(b.cong_no.da_thanh_toan)} / ${fmt(b.cong_no.phai_tra)}</p>
+  ${b.cong_no.con_phai_thu>0?`
+   <div class="field" style="max-width:260px"><label>Phương thức thanh toán</label>
+    <select id="payMethod"><option>Ví điện tử</option><option>Thẻ ATM</option><option>Chuyển khoản</option><option>Tiền mặt</option></select></div>
+   <div class="qr"></div>
+   <button class="btn primary sm" onclick="payInvoice('${b.hoa_don.ma_hoa_don}','${b.cong_no.con_phai_thu}','${b.so_phieu_dang_ky}')">Thanh toán ${fmt(b.cong_no.con_phai_thu)}</button>`:''}
+ </div>`:''}
+
+ ${b.trang_thai==='hoan_thanh'?`<div id="reviewBox" style="margin-top:14px"></div>`:''}
+ `;
 }
-async function payBooking(bookingId){
+async function removePassenger(bookingId,hkId){ try{ await api(`/bookings/${bookingId}/hanh-khach/${hkId}`,{method:'DELETE'}); nav('account',{sub:'orderDetail',bookingId}); }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+async function addPassenger(bookingId){
+ try{ await api(`/bookings/${bookingId}/hanh-khach`,{method:'POST',body:JSON.stringify({ho_ten:val('hkName'),la_tre_em:document.getElementById('hkType').value==='1'})});
+  nav('account',{sub:'orderDetail',bookingId});
+ }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function payInvoice(hoaDonId,soTien,bookingId){
  try{
   const method=document.getElementById('payMethod').value;
-  const r=await api('/payments/'+bookingId+'/confirm',{method:'POST',body:JSON.stringify({method})});
-  document.getElementById('odMsg').innerHTML=`<div class="msg">${r.message}</div>`;
-  setTimeout(()=>nav('account',{sub:'orderDetail',bookingId}),700);
+  await api(`/hoa-don/${hoaDonId}/thu`,{method:'POST',body:JSON.stringify({so_tien:Number(soTien),phuong_thuc:method})});
+  document.getElementById('odMsg').innerHTML=`<div class="msg">Thanh toán thành công!</div>`;
+  setTimeout(()=>nav('account',{sub:'orderDetail',bookingId}),600);
  }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
-async function cancelBooking(bookingId){
- try{
-  await api('/bookings/'+bookingId+'/cancel',{method:'POST'});
-  nav('account',{sub:'orderDetail',bookingId});
- }catch(e){ document.getElementById('odMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+// Hiển thị form đánh giá nếu đơn đã hoàn thành (gọi riêng sau khi render xong)
+async function maybeShowReviewForm(bookingId){
+ const box=document.getElementById('reviewBox'); if(!box) return;
+ const mine=await api('/danh-gia/mine');
+ const existed=mine.find(r=>r.so_phieu_dang_ky===bookingId);
+ if(existed){ box.innerHTML=`<div class="card"><h4 style="margin-top:0">Đánh giá của bạn</h4>${starsHtml(existed.so_sao)}<p style="font-size:13.5px">${existed.noi_dung||''}</p></div>`; return; }
+ box.innerHTML=`<div class="card"><h4 style="margin-top:0">Đánh giá tour này</h4><div id="revMsg"></div>
+  <div class="star-input" id="starInput">${[1,2,3,4,5].map(n=>`<span data-v="${n}" onclick="setStar(${n})">★</span>`).join('')}</div>
+  <textarea id="revComment" rows="2" placeholder="Cảm nhận của bạn..." style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:8px"></textarea>
+  <button class="btn primary sm" onclick="submitReview('${bookingId}')">Gửi đánh giá</button></div>`;
 }
-async function showChangeForm(bookingId,curTourId){
- const tours=(await api('/tours')).filter(t=>t.id!==curTourId);
- document.getElementById('changeFormBox').innerHTML=`<div class="card" style="margin-top:16px">
-  <h3 style="margin-top:0">Yêu cầu đổi tour</h3><div id="chgMsg"></div>
-  <div class="field"><label>Đổi sang tour</label><select id="newTourSel">${tours.map(t=>`<option value="${t.id}">${t.name} (${t.depart_date})</option>`).join('')}</select></div>
-  <button class="btn primary sm" onclick="submitChange('${bookingId}')">Gửi yêu cầu</button></div>`;
-}
-async function submitChange(bookingId){
- const msg=document.getElementById('chgMsg');
- try{
-  await api('/changes',{method:'POST',body:JSON.stringify({bookingId,newTourId:document.getElementById('newTourSel').value})});
+let selectedStar=5;
+function setStar(n){ selectedStar=n; document.querySelectorAll('#starInput span').forEach(s=>s.classList.toggle('sel', +s.dataset.v<=n)); }
+async function submitReview(bookingId){
+ try{ await api('/danh-gia',{method:'POST',body:JSON.stringify({so_phieu_dang_ky:bookingId,so_sao:selectedStar,noi_dung:val('revComment')})});
   nav('account',{sub:'orderDetail',bookingId});
- }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+ }catch(e){ document.getElementById('revMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
 
 /* ================= ADMIN ================= */
 function adminSidebar(active){
- const items=[['admin-dash','Tổng quan'],['admin-tours','Quản lý tour'],['admin-bookings','Đặt chỗ (booking)'],['admin-crm','Khách hàng'],
-  ['admin-finance','Thanh toán & tài chính'],['admin-staff','Nhân sự'],['admin-suppliers','Nhà cung cấp'],['admin-reports','Báo cáo & thống kê']];
+ const items=[
+  ['admin-dash','Tổng quan',null],['admin-tours','Quản lý tour','TOUR_MANAGE'],
+  ['admin-bookings','Đặt chỗ (booking)','BOOKING_MANAGE'],['admin-customers','Khách hàng','CUSTOMER_MANAGE'],
+  ['admin-finance','Thanh toán & tài chính','PAYMENT_MANAGE'],['admin-staff','Nhân viên','EMPLOYEE_MANAGE'],
+  ['admin-suppliers','Nhà cung cấp','SUPPLIER_MANAGE'],['admin-reports','Báo cáo & thống kê','REPORT_VIEW'],
+ ];
+ const u=getUser();
  return `<aside class="sidebar"><div class="logo" style="display:flex;gap:8px;align-items:center;font-weight:700" onclick="nav('home')"><span class="plane">✈</span>TravelGo</div>
- ${items.map(x=>`<a class="${x[0]===active?'active':''}" onclick="nav('${x[0]}')">${x[1]}</a>`).join('')}
- <a style="margin-top:20px;color:#9aa2c9" onclick="logout()">🚪 Đăng xuất</a></aside>`;
+ ${items.filter(x=>!x[2]||hasPerm(x[2])).map(x=>`<a class="${x[0]===active?'active':''}" onclick="nav('${x[0]}')">${x[1]}</a>`).join('')}
+ <div style="color:#9aa2c9;font-size:11.5px;padding:14px 12px 4px">${u?vaiTroLabel[u.vaiTro]||'':''}</div>
+ <a style="color:#9aa2c9" onclick="logout()">🚪 Đăng xuất</a></aside>`;
 }
 function adminTop(title){const u=getUser();return `<div class="admin-top"><h2 style="margin:0">${title}</h2><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--muted)">${u?u.email:''}</span><div class="avatar">A</div></div></div>`;}
 
 async function AdminDash(){
- const s=await api('/stats/dashboard');
- const stats=[['Tổng tour',s.totalTours],['Tổng đơn đặt',s.totalBookings],['Doanh thu (đã thu)',fmt(s.totalPaid)],['Khách hàng',s.totalCustomers]];
+ const s=await api('/thong-ke/tong-quan');
+ const stats=[['Tổng tour',s.totalTours],['Tổng đơn đặt',s.totalBookings],['Doanh thu tháng này',fmt(s.monthRevenue)],['Khách hàng',s.totalCustomers]];
  return `<div class="admin-shell">${adminSidebar('admin-dash')}<main class="admin-main">${adminTop('Tổng quan')}
  <div class="grid g4">${stats.map(x=>`<div class="stat-card"><div class="lbl">${x[0]}</div><div class="val">${x[1]}</div></div>`).join('')}</div>
- <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Booking gần đây</h3>
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Đơn đặt gần đây</h3>
  <table><thead><tr><th>Mã phiếu</th><th>Khách hàng</th><th>Tour</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
- <tbody>${s.recentBookings.map(b=>`<tr><td>${b.id}</td><td>${b.customer_name}</td><td>${b.tour_name}</td><td>${fmt(b.total)}</td><td><span class="badge ${b.status}">${statusLabel[b.status]}</span></td></tr>`).join('')||'<tr><td colspan="5">Chưa có booking</td></tr>'}</tbody></table></div>
+ <tbody>${s.recent.map(b=>`<tr><td>${b.so_phieu_dang_ky}</td><td>${b.ten_khach}</td><td>${b.ten_tour}</td><td>${fmt(b.tong_tien)}</td><td><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></td></tr>`).join('')||'<tr><td colspan="5">Chưa có đơn</td></tr>'}</tbody></table></div>
  </main></div>`;
 }
-const seatStatusLabel={active:'Còn chỗ',low:'Sắp hết',full:'Hết chỗ'};
+
+/* ---- Quản lý tour ---- */
 let toursCache=[];
 async function AdminTours(){
- const tours=await api('/tours');
- toursCache=tours;
- const destinations=[...new Set(tours.map(t=>t.to_place))];
+ const tours=await api('/tours'); toursCache=tours;
  return `<div class="admin-shell">${adminSidebar('admin-tours')}<main class="admin-main">
  <div class="admin-top"><h2 style="margin:0">Quản lý tour</h2></div>
- <div class="filters-row">
-  <input id="fKeyword" placeholder="Tìm theo tên tour..." oninput="applyTourFilter()">
-  <select id="fDest" onchange="applyTourFilter()"><option value="">Tất cả điểm đến</option>${destinations.map(d=>`<option>${d}</option>`).join('')}</select>
-  <select id="fRegion" onchange="applyTourFilter()"><option value="">Tất cả loại tour</option><option value="trongnuoc">Trong nước</option><option value="nuocngoai">Nước ngoài</option></select>
-  <select id="fSeat" onchange="applyTourFilter()"><option value="">Tất cả trạng thái</option><option value="active">Còn chỗ</option><option value="low">Sắp hết</option><option value="full">Hết chỗ</option></select>
- </div>
- <div class="card"><table><thead><tr><th>Mã</th><th>Tên tour</th><th>Điểm đến</th><th>Giá</th><th>Ngày khởi hành</th><th>Chỗ còn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
- <tbody id="toursTbody">${renderTourRows(tours)}</tbody></table></div>
- <div class="card" style="margin-top:18px"><h3 style="margin-top:0" id="tourFormTitle">Thêm tour mới</h3><div id="tourMsg"></div>
- <input type="hidden" id="tEditId">
+ <div class="card"><table><thead><tr><th>Mã</th><th>Tên tour</th><th>Điểm đến</th><th>Số khởi hành</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody>${tours.map(t=>`<tr><td>${t.ma_tour}</td><td>${t.ten_tour}</td><td>${t.diem_den}</td><td>${t.khoi_hanh.length}</td>
+ <td><span class="badge ${t.trang_thai==='hoat_dong'?'hoat_dong':'khoa'}">${t.trang_thai==='hoat_dong'?'Đang hoạt động':t.trang_thai==='tam_ngung'?'Tạm ngừng':'Ngừng'}</span></td>
+ <td><span class="icon-btn edit" onclick="viewTourAdmin('${t.ma_tour}')">👁</span><span class="icon-btn del" onclick="deleteTour('${t.ma_tour}')">🗑</span></td></tr>`).join('')}</tbody></table></div>
+
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm tour mới</h3><div id="tourMsg"></div>
  <div class="grid g2">
   <div class="field"><label>Tên tour</label><input id="tName" placeholder="VD: Nha Trang - VinWonders"></div>
-  <div class="field"><label>Loại hình</label><select id="tRegion"><option value="trongnuoc">Trong nước</option><option value="nuocngoai">Nước ngoài</option></select></div>
+  <div class="field"><label>Khu vực</label><select id="tRegion"><option value="trong_nuoc">Trong nước</option><option value="nuoc_ngoai">Nước ngoài</option></select></div>
   <div class="field"><label>Điểm khởi hành</label><input id="tFrom" placeholder="VD: TP.HCM"></div>
   <div class="field"><label>Điểm đến</label><input id="tTo" placeholder="VD: Nha Trang"></div>
-  <div class="field"><label>Giá</label><input id="tCost" type="number" placeholder="VD: 6490000"></div>
-  <div class="field"><label>Giá gốc (nếu có giảm giá)</label><input id="tOldCost" type="number" placeholder="Để trống nếu không giảm giá"></div>
-  <div class="field"><label>Thời lượng</label><input id="tDur" placeholder="VD: 4 ngày 3 đêm"></div>
-  <div class="field"><label>Ngày khởi hành</label><input id="tDepart" type="date"></div>
-  <div class="field"><label>Số chỗ</label><input id="tSeats" type="number" placeholder="VD: 20"></div>
+  <div class="field"><label>Số ngày</label><input id="tDays" type="number" placeholder="VD: 4"></div>
+  <div class="field"><label>Số đêm</label><input id="tNights" type="number" placeholder="VD: 3"></div>
  </div>
- <div class="field"><label>Lịch trình (mỗi dòng 1 ngày)</label><textarea id="tSchedule" rows="3" placeholder="Ngày 1: ...&#10;Ngày 2: ..."></textarea></div>
- <button class="btn primary" onclick="saveTour()">Lưu tour</button>
- <button class="btn outline" id="tCancelEditBtn" style="display:none" onclick="nav('admin-tours')">Hủy sửa</button>
- </div>
+ <div class="field"><label>Lịch trình (mỗi dòng 1 ngày)</label><textarea id="tSchedule" rows="3" placeholder="Đón khách - tham quan...&#10;Tự do tắm biển..."></textarea></div>
+ <button class="btn primary" onclick="addTour()">Thêm tour</button></div>
+
+ <div id="tourDetailAdminBox"></div>
  </main></div>`;
 }
-function renderTourRows(tours){
- return tours.map(t=>`<tr><td>${t.id}</td><td>${t.name}</td><td>${t.to_place}</td><td>${fmt(t.cost)}</td><td>${t.depart_date}</td><td>${t.seats}</td>
- <td><span class="badge ${t.seatStatus}">${seatStatusLabel[t.seatStatus]}</span></td>
- <td><span class="icon-btn edit" onclick="editTour('${t.id}')">✎</span><span class="icon-btn del" onclick="deleteTour('${t.id}')">🗑</span></td></tr>`).join('')||'<tr><td colspan="8">Không có tour phù hợp</td></tr>';
-}
-function applyTourFilter(){
- const kw=val('fKeyword').toLowerCase(), dest=document.getElementById('fDest').value, region=document.getElementById('fRegion').value, seat=document.getElementById('fSeat').value;
- const filtered=toursCache.filter(t=> (!kw||t.name.toLowerCase().includes(kw)) && (!dest||t.to_place===dest) && (!region||t.region===region) && (!seat||t.seatStatus===seat));
- document.getElementById('toursTbody').innerHTML=renderTourRows(filtered);
-}
-function editTour(id){
- const t=toursCache.find(x=>x.id===id); if(!t) return;
- document.getElementById('tourFormTitle').textContent='Sửa tour — '+t.name;
- document.getElementById('tEditId').value=t.id;
- document.getElementById('tName').value=t.name;
- document.getElementById('tRegion').value=t.region;
- document.getElementById('tFrom').value=t.from_place;
- document.getElementById('tTo').value=t.to_place;
- document.getElementById('tCost').value=t.cost;
- document.getElementById('tOldCost').value=t.old_cost||'';
- document.getElementById('tDur').value=t.duration;
- document.getElementById('tDepart').value=t.depart_date;
- document.getElementById('tSeats').value=t.seats;
- document.getElementById('tSchedule').value=(t.schedule||[]).join('\n');
- document.getElementById('tCancelEditBtn').style.display='inline-block';
- document.getElementById('tourFormTitle').scrollIntoView({behavior:'smooth'});
-}
-async function saveTour(){
+async function addTour(){
  const msg=document.getElementById('tourMsg');
- const editId=val('tEditId');
- const body={
-  name:val('tName'),region:document.getElementById('tRegion').value,from_place:val('tFrom'),to_place:val('tTo'),
-  cost:parseInt(val('tCost')||'0'),old_cost:parseInt(val('tOldCost')||'0'),duration:val('tDur'),depart_date:val('tDepart'),seats:parseInt(val('tSeats')||'0'),
-  schedule:(val('tSchedule')||'').split('\n').filter(Boolean)
- };
  try{
-  if(editId){ await api('/tours/'+editId,{method:'PUT',body:JSON.stringify(body)}); }
-  else{ await api('/tours',{method:'POST',body:JSON.stringify(body)}); }
+  await api('/tours',{method:'POST',body:JSON.stringify({
+   ten_tour:val('tName'),khu_vuc:document.getElementById('tRegion').value,diem_di:val('tFrom'),diem_den:val('tTo'),
+   so_ngay:parseInt(val('tDays')||'1'),so_dem:parseInt(val('tNights')||'0'),
+   lich_trinh:(val('tSchedule')||'').split('\n').filter(Boolean)
+  })});
   nav('admin-tours');
  }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
-async function deleteTour(id){ if(!confirm('Xóa tour này?')) return; await api('/tours/'+id,{method:'DELETE'}); nav('admin-tours'); }
+async function deleteTour(id){
+ if(!confirm('Xóa / ngừng tour này?')) return;
+ const r=await api('/tours/'+id,{method:'DELETE'});
+ if(r.note) alert(r.note);
+ nav('admin-tours');
+}
+async function viewTourAdmin(id){
+ const t=await api('/tours/'+id);
+ document.getElementById('tourDetailAdminBox').innerHTML=`<div class="card" style="margin-top:18px">
+  <h3 style="margin-top:0">Khởi hành của: ${t.ten_tour}</h3>
+  <table><thead><tr><th>Mã</th><th>Ngày đi</th><th>Giá NL</th><th>Giá TE</th><th>Chỗ tối đa</th><th>Còn</th><th>Trạng thái</th></tr></thead>
+  <tbody>${t.khoi_hanh.map(k=>`<tr><td>${k.ma_khoi_hanh}</td><td>${k.ngay_khoi_hanh}</td><td>${fmt(k.gia_nguoi_lon)}</td><td>${fmt(k.gia_tre_em)}</td><td>${k.so_cho_toi_da}</td><td>${k.cho_con}</td><td><span class="badge ${k.trang_thai_cho}">${k.trang_thai}</span></td></tr>`).join('')}</tbody></table>
+  <h4>Thêm khởi hành mới</h4><div id="khMsg"></div>
+  <div class="grid g2">
+   <div class="field"><label>Ngày khởi hành</label><input type="date" id="khDate"></div>
+   <div class="field"><label>Giờ</label><input type="time" id="khTime" value="06:00"></div>
+   <div class="field"><label>Giá người lớn</label><input type="number" id="khGiaNL"></div>
+   <div class="field"><label>Giá trẻ em</label><input type="number" id="khGiaTE"></div>
+   <div class="field"><label>Giá gốc (nếu giảm giá)</label><input type="number" id="khGiaGoc"></div>
+   <div class="field"><label>Số chỗ tối đa</label><input type="number" id="khSeats"></div>
+  </div>
+  <button class="btn primary sm" onclick="addKhoiHanh('${t.ma_tour}')">Thêm khởi hành</button>
+ </div>`;
+}
+async function addKhoiHanh(tourId){
+ const msg=document.getElementById('khMsg');
+ try{
+  await api(`/tours/${tourId}/khoi-hanh`,{method:'POST',body:JSON.stringify({
+   ngay_khoi_hanh:val('khDate'),gio_khoi_hanh:val('khTime'),gia_nguoi_lon:parseInt(val('khGiaNL')||'0'),
+   gia_tre_em:parseInt(val('khGiaTE')||'0'),gia_goc:parseInt(val('khGiaGoc')||'0'),so_cho_toi_da:parseInt(val('khSeats')||'1')
+  })});
+  viewTourAdmin(tourId);
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
 
+/* ---- Đặt chỗ (booking) ---- */
 async function AdminBookings(){
- const [bookings,tours]=await Promise.all([api('/bookings'),api('/tours')]);
+ const bookings=await api('/bookings');
  return `<div class="admin-shell">${adminSidebar('admin-bookings')}<main class="admin-main">${adminTop('Danh sách đặt chỗ')}
  <div class="filters-row">
-  <input id="bfFrom" type="date" title="Từ ngày" onchange="applyBookingFilter()">
-  <input id="bfTo" type="date" title="Đến ngày" onchange="applyBookingFilter()">
-  <select id="bfTour" onchange="applyBookingFilter()"><option value="">Tất cả tour</option>${tours.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
-  <select id="bfStatus" onchange="applyBookingFilter()"><option value="">Tất cả trạng thái</option><option value="wait">Chờ xác nhận</option><option value="confirmed">Đã xác nhận</option><option value="paid">Đã thanh toán</option><option value="cancelled">Đã hủy</option></select>
+  <select id="bfStatus" onchange="applyBookingFilter()"><option value="">Tất cả trạng thái</option><option value="cho_xac_nhan">Chờ xác nhận</option><option value="da_xac_nhan">Đã xác nhận</option><option value="hoan_thanh">Hoàn thành</option><option value="da_huy">Đã hủy</option></select>
  </div>
- <div class="card"><table><thead><tr><th>Mã phiếu</th><th>Khách hàng</th><th>Tour</th><th>Ngày đặt</th><th>Khởi hành</th><th>SL</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <div class="card"><table><thead><tr><th>Mã phiếu</th><th>Khách hàng</th><th>Tour</th><th>Khởi hành</th><th>SL</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
  <tbody id="bookingsTbody">${renderBookingRows(bookings)}</tbody></table></div>
+ <div id="bookingDetailBox"></div>
  </main></div>`;
 }
-function renderBookingRows(bookings){
- return bookings.map(b=>`<tr><td>#${b.id}</td><td>${b.customer.name}</td><td>${b.tour.name}</td><td>${b.booking_date}</td><td>${b.depart_date}</td><td>${b.qty}</td><td>${fmt(b.total)}</td>
- <td><span class="badge ${b.status}">${statusLabel[b.status]}</span></td>
- <td>${b.status==='wait'?`<button class="btn sm primary" onclick="confirmBooking('${b.id}')">Xác nhận</button>`:''}
- ${(b.status==='wait'||b.status==='confirmed')?`<button class="btn sm outline" onclick="adminCancelBooking('${b.id}')">Hủy</button>`:''}
- ${b.status==='paid'||b.status==='cancelled'?'—':''}</td></tr>`).join('')||'<tr><td colspan="9">Không có đơn phù hợp</td></tr>';
+function renderBookingRows(rows){
+ return rows.map(b=>`<tr><td>${b.so_phieu_dang_ky}</td><td>${b.khach_hang.ho_ten}</td><td>${b.tour.ten_tour}</td><td>${b.khoi_hanh.ngay_khoi_hanh}</td><td>${b.so_luong_nguoi}</td><td>${fmt(b.tong_tien)}</td>
+ <td><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></td>
+ <td><button class="btn sm outline" onclick="viewBookingAdmin('${b.so_phieu_dang_ky}')">Chi tiết</button></td></tr>`).join('')||'<tr><td colspan="8">Không có đơn phù hợp</td></tr>';
 }
 async function applyBookingFilter(){
- const q=new URLSearchParams();
- if(val('bfFrom')) q.set('from',val('bfFrom'));
- if(val('bfTo')) q.set('to',val('bfTo'));
- if(document.getElementById('bfTour').value) q.set('tourId',document.getElementById('bfTour').value);
- if(document.getElementById('bfStatus').value) q.set('status',document.getElementById('bfStatus').value);
- const bookings=await api('/bookings?'+q.toString());
+ const q=document.getElementById('bfStatus').value;
+ const bookings=await api('/bookings'+(q?('?trang_thai='+q):''));
  document.getElementById('bookingsTbody').innerHTML=renderBookingRows(bookings);
 }
-async function confirmBooking(id){ await api('/bookings/'+id+'/confirm',{method:'POST'}); applyBookingFilter(); }
-async function adminCancelBooking(id){ if(!confirm('Hủy đơn này?')) return; await api('/bookings/'+id+'/cancel',{method:'POST'}); applyBookingFilter(); }
+async function viewBookingAdmin(id){
+ const b=await api('/bookings/'+id);
+ const box=document.getElementById('bookingDetailBox');
+ box.innerHTML=`<div class="card" style="margin-top:18px">
+  <div style="display:flex;justify-content:space-between"><h3 style="margin-top:0">Chi tiết đơn ${b.so_phieu_dang_ky}</h3><span class="badge ${b.trang_thai}">${donLabel[b.trang_thai]}</span></div>
+  <div id="bdMsg"></div>
+  <p style="font-size:13.5px"><b>Khách hàng:</b> ${b.khach_hang.ho_ten} — ${b.khach_hang.sdt} · CCCD: ${b.khach_hang.so_cccd}<br>
+  <b>Tour:</b> ${b.tour.ten_tour} · <b>Khởi hành:</b> ${b.khoi_hanh.ngay_khoi_hanh}<br>
+  <b>Số lượng:</b> ${b.so_nguoi_lon} người lớn, ${b.so_tre_em} trẻ em · <b>Tổng tiền:</b> ${fmt(b.tong_tien)}</p>
+  <h4>Hành khách (${b.hanh_khach.length}/${b.so_luong_nguoi})</h4>
+  ${b.hanh_khach.map(h=>`<div class="passenger-row"><span>${h.ho_ten} ${h.la_tre_em?'(trẻ em)':'(người lớn)'}</span></div>`).join('')||'<p style="color:var(--muted);font-size:13px">Khách chưa khai báo hành khách.</p>'}
+  ${b.hoa_don?`<p style="font-size:13.5px;margin-top:10px"><b>Thanh toán:</b> ${fmt(b.cong_no.da_thanh_toan)}/${fmt(b.cong_no.phai_tra)} — <span class="badge ${b.cong_no.trang_thai_thanh_toan}">${ttThanhToanLabel[b.cong_no.trang_thai_thanh_toan]}</span></p>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+   ${b.trang_thai==='cho_xac_nhan'?`<button class="btn sm primary" onclick="confirmBooking('${b.so_phieu_dang_ky}')">Xác nhận đơn</button>`:''}
+   ${(b.trang_thai==='cho_xac_nhan'||b.trang_thai==='da_xac_nhan')?`<button class="btn sm outline" onclick="showCancelForm('${b.so_phieu_dang_ky}')">Hủy đơn</button>`:''}
+   ${b.trang_thai==='da_xac_nhan'?`<button class="btn sm outline" onclick="showChangeTourForm('${b.so_phieu_dang_ky}','${b.ma_khoi_hanh}')">Lập phiếu đổi tour</button>`:''}
+   ${b.trang_thai==='da_xac_nhan'?`<button class="btn sm outline" onclick="markComplete('${b.so_phieu_dang_ky}')">Đánh dấu hoàn thành</button>`:''}
+  </div>
+  <div id="bdExtra"></div>
+ </div>`;
+}
+async function confirmBooking(id){ try{ await api(`/bookings/${id}/xac-nhan`,{method:'POST'}); viewBookingAdmin(id); applyBookingFilter(); }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+async function markComplete(id){ try{ await api(`/bookings/${id}/hoan-thanh`,{method:'POST'}); viewBookingAdmin(id); applyBookingFilter(); }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; } }
+function showCancelForm(id){
+ document.getElementById('bdExtra').innerHTML=`<div class="field" style="margin-top:10px"><label>Lý do hủy</label><input id="cancelReason">
+ <label style="margin-top:8px">Phí hủy (nếu có)</label><input id="cancelFee" type="number" value="0">
+ <button class="btn sm primary" style="margin-top:8px" onclick="doCancelBooking('${id}')">Xác nhận hủy đơn</button></div>`;
+}
+async function doCancelBooking(id){
+ try{ await api(`/bookings/${id}/huy`,{method:'POST',body:JSON.stringify({ly_do:val('cancelReason'),phi_huy:parseInt(val('cancelFee')||'0')})});
+  viewBookingAdmin(id); applyBookingFilter();
+ }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
+async function showChangeTourForm(id,curKH){
+ const t=await api('/tours');
+ const allKH=t.flatMap(tt=>tt.khoi_hanh.filter(k=>k.ma_khoi_hanh!==curKH&&k.trang_thai==='mo_ban').map(k=>({...k,ten_tour:tt.ten_tour})));
+ document.getElementById('bdExtra').innerHTML=`<div class="field" style="margin-top:10px"><label>Đổi sang khởi hành</label>
+ <select id="newKH">${allKH.map(k=>`<option value="${k.ma_khoi_hanh}">${k.ten_tour} — ${k.ngay_khoi_hanh} (${fmt(k.gia_nguoi_lon)})</option>`).join('')}</select>
+ <label style="margin-top:8px">Lý do đổi</label><input id="changeReason">
+ <button class="btn sm primary" style="margin-top:8px" onclick="doChangeTour('${id}')">Lập phiếu đổi tour</button></div>`;
+}
+async function doChangeTour(id){
+ try{ const r=await api('/phieu-doi-tour',{method:'POST',body:JSON.stringify({so_phieu_dang_ky:id,ma_khoi_hanh_moi:document.getElementById('newKH').value,ly_do:val('changeReason')})});
+  alert(r.message); viewBookingAdmin(id); applyBookingFilter();
+ }catch(e){ document.getElementById('bdMsg').innerHTML=`<div class="msg err">${e.message}</div>`; }
+}
 
-let customersCache=[];
-async function AdminCRM(){
- const customers=await api('/customers');
- customersCache=customers;
- return `<div class="admin-shell">${adminSidebar('admin-crm')}<main class="admin-main">
- <div class="admin-top"><h2 style="margin:0">Danh sách khách hàng</h2></div>
- <div class="filters-row"><input id="cfKeyword" placeholder="Tìm theo tên, SĐT, email..." style="min-width:260px" oninput="applyCustomerFilter()"></div>
+/* ---- Khách hàng ---- */
+async function AdminCustomers(){
+ const rows=await api('/khach-hang');
+ return `<div class="admin-shell">${adminSidebar('admin-customers')}<main class="admin-main">${adminTop('Danh sách khách hàng')}
  <div class="card"><table><thead><tr><th>Mã KH</th><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Số lần đặt</th><th>Phân loại</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
- <tbody id="customersTbody">${renderCustomerRows(customers)}</tbody></table></div>
+ <tbody>${rows.map(c=>`<tr><td>${c.ma_khach_hang}</td><td>${c.ho_ten}</td><td>${c.sdt}</td><td>${c.email}</td><td>${c.so_lan_dat}</td>
+ <td><span class="badge ${c.phan_loai==='VIP'?'hoan_thanh':'da_xac_nhan'}">${c.phan_loai}</span></td>
+ <td><span class="badge ${c.bi_khoa?'khoa':'hoat_dong'}">${c.bi_khoa?'Khóa':'Hoạt động'}</span></td>
+ <td><button class="btn sm outline" onclick="toggleLock('${c.ma_khach_hang}')">${c.bi_khoa?'Mở khóa':'Khóa'}</button></td></tr>`).join('')}</tbody></table></div>
  </main></div>`;
 }
-function renderCustomerRows(rows){
- return rows.map(c=>`<tr><td>${c.id}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.bookingCount}</td>
- <td><span class="badge ${c.tier==='VIP'?'paid':'confirmed'}">${c.tier}</span></td>
- <td><span class="badge ${c.is_locked?'locked':'active'}">${c.is_locked?'Khóa':'Hoạt động'}</span></td>
- <td><button class="btn sm outline" onclick="toggleCustomerLock('${c.id}')">${c.is_locked?'Mở khóa':'Khóa'}</button></td></tr>`).join('')||'<tr><td colspan="8">Không có khách hàng</td></tr>';
-}
-function applyCustomerFilter(){
- const kw=val('cfKeyword').toLowerCase();
- const filtered=customersCache.filter(c=>(c.name+c.phone+c.email).toLowerCase().includes(kw));
- document.getElementById('customersTbody').innerHTML=renderCustomerRows(filtered);
-}
-async function toggleCustomerLock(id){ await api('/customers/'+id+'/lock',{method:'PATCH'}); nav('admin-crm'); }
+async function toggleLock(id){ await api('/khach-hang/'+id+'/khoa',{method:'PATCH'}); nav('admin-customers'); }
 
-/* ---------- Thanh toán & tài chính ---------- */
+/* ---- Thanh toán & tài chính ---- */
 async function AdminFinance(){
- const [invoices,revByMonth,methods]=await Promise.all([api('/stats/invoices'),api('/stats/revenue-by-month'),api('/stats/payment-methods')]);
- const totalRevenue=invoices.reduce((s,i)=>s+i.amount,0);
- const curMonth=new Date().toISOString().slice(0,7);
- const monthRevenue=invoices.filter(i=>i.invoice_date.slice(0,7)===curMonth).reduce((s,i)=>s+i.amount,0);
+ const [invoices,methods,congNo]=await Promise.all([api('/hoa-don'),api('/thong-ke/phuong-thuc-thanh-toan'),api('/thong-ke/cong-no')]);
+ const totalThu=congNo.reduce((s,c)=>s+c.da_thanh_toan,0);
+ const totalPhaiThu=congNo.reduce((s,c)=>s+c.con_phai_thu,0);
  return `<div class="admin-shell">${adminSidebar('admin-finance')}<main class="admin-main">${adminTop('Thanh toán & tài chính')}
  <div class="grid g3" style="margin-bottom:18px">
-  <div class="stat-card"><div class="lbl">Tổng doanh thu</div><div class="val">${fmt(totalRevenue)}</div></div>
-  <div class="stat-card"><div class="lbl">Doanh thu tháng này</div><div class="val">${fmt(monthRevenue)}</div></div>
-  <div class="stat-card"><div class="lbl">Tổng giao dịch</div><div class="val">${invoices.length}</div></div>
+  <div class="stat-card"><div class="lbl">Đã thu</div><div class="val" style="color:var(--success)">${fmt(totalThu)}</div></div>
+  <div class="stat-card"><div class="lbl">Còn phải thu</div><div class="val" style="color:var(--warning)">${fmt(totalPhaiThu)}</div></div>
+  <div class="stat-card"><div class="lbl">Tổng hóa đơn</div><div class="val">${invoices.length}</div></div>
  </div>
- <div class="grid g2" style="grid-template-columns:1.6fr 1fr">
-  <div class="chart-box"><h3 style="margin:0 0 8px">Doanh thu theo tháng</h3><canvas id="financeLineChart" height="140"></canvas></div>
-  <div class="chart-box"><h3 style="margin:0 0 8px">Phương thức thanh toán</h3><canvas id="financeDonutChart" height="140"></canvas>
-   <div style="margin-top:10px">${methods.map(m=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;margin:4px 0"><span>${m.method}</span><b>${m.share}%</b></div>`).join('')}</div>
-  </div>
- </div>
- <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Giao dịch gần đây</h3>
- <table><thead><tr><th>Mã hóa đơn</th><th>Khách hàng</th><th>Số tiền</th><th>PTTT</th><th>Trạng thái</th><th>Ngày</th></tr></thead>
- <tbody id="financeTbody"></tbody></table>
- <div class="pager" id="financePager"></div></div>
+ <div class="chart-box"><h3 style="margin:0 0 8px">Phương thức thanh toán</h3><canvas id="financeDonut" height="100"></canvas></div>
+ <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Hóa đơn</h3>
+ <table><thead><tr><th>Mã hóa đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Đã thu</th><th>Trạng thái</th></tr></thead>
+ <tbody>${invoices.map(i=>`<tr><td>${i.ma_hoa_don}</td><td>${i.ten_khach}</td><td>${fmt(i.tong_tien)}</td><td>${fmt(i.so_tien_da_thanh_toan)}</td><td><span class="badge ${i.trang_thai_thanh_toan}">${ttThanhToanLabel[i.trang_thai_thanh_toan]}</span></td></tr>`).join('')||'<tr><td colspan="5">Chưa có hóa đơn</td></tr>'}</tbody></table></div>
  </main></div>`;
 }
-let financePage=1;
-function mountFinanceCharts(invoices,revByMonth,methods){
- new Chart(document.getElementById('financeLineChart'),{type:'line',data:{labels:revByMonth.map(r=>r.label),datasets:[{data:revByMonth.map(r=>r.total),borderColor:'#2F5CE0',backgroundColor:'rgba(47,92,224,.12)',fill:true,tension:.3}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v/1000000)+'tr'}}}}});
- new Chart(document.getElementById('financeDonutChart'),{type:'doughnut',data:{labels:methods.map(m=>m.method),datasets:[{data:methods.map(m=>m.share),backgroundColor:['#2F5CE0','#1FAE6B','#F5A623','#9AA2B1']}]},options:{plugins:{legend:{display:false}}}});
- renderFinancePage(invoices);
+function mountFinanceChart(methods){
+ new Chart(document.getElementById('financeDonut'),{type:'doughnut',data:{labels:methods.map(m=>m.phuong_thuc),datasets:[{data:methods.map(m=>m.ty_le),backgroundColor:['#2F5CE0','#1FAE6B','#F5A623','#9AA2B1']}]},options:{plugins:{legend:{position:'bottom'}}}});
 }
-function renderFinancePage(invoices){
- const perPage=5, pages=Math.max(1,Math.ceil(invoices.length/perPage));
- const slice=invoices.slice((financePage-1)*perPage, financePage*perPage);
- document.getElementById('financeTbody').innerHTML=slice.map(i=>`<tr><td>${i.id}</td><td>${i.customer_name||'—'}</td><td>${fmt(i.amount)}</td><td>${i.payment_method}</td><td><span class="badge paid">Thành công</span></td><td>${i.invoice_date}</td></tr>`).join('')||'<tr><td colspan="6">Chưa có giao dịch</td></tr>';
- document.getElementById('financePager').innerHTML=Array.from({length:pages},(_,i)=>i+1).map(p=>`<button class="${p===financePage?'active':''}" onclick="financeGoto(${p})">${p}</button>`).join('');
- window.__financeInvoices=invoices;
-}
-function financeGoto(p){ financePage=p; renderFinancePage(window.__financeInvoices); }
 
-/* ---------- Báo cáo & thống kê ---------- */
-let reportRangeDays=30;
-async function AdminReports(){
- return `<div class="admin-shell">${adminSidebar('admin-reports')}<main class="admin-main">${adminTop('Báo cáo & thống kê')}
- <div class="range-btns" style="margin-bottom:16px">
-  ${[[7,'7 ngày'],[30,'30 ngày'],[90,'3 tháng'],[365,'1 năm']].map(r=>`<button class="${r[0]===reportRangeDays?'active':''}" onclick="setReportRange(${r[0]})">${r[1]}</button>`).join('')}
- </div>
- <div id="reportBody"><div class="loading">Đang tải báo cáo...</div></div>
+/* ---- Nhân viên ---- */
+async function AdminStaff(){
+ const employees=await api('/nhan-vien');
+ const vaiTros=await api('/vai-tro');
+ const isAdmin=(getUser()||{}).isAdmin;
+ return `<div class="admin-shell">${adminSidebar('admin-staff')}<main class="admin-main">${adminTop('Danh sách nhân viên')}
+ <div class="card"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Chức vụ</th><th>Vai trò</th><th>Email</th><th>Trạng thái</th>${isAdmin?'<th>Thao tác</th>':''}</tr></thead>
+ <tbody>${employees.map(e=>`<tr><td>${e.ma_nhan_vien}</td><td>${e.ho_ten}</td><td>${e.chuc_vu||''}</td><td>${vaiTroLabel[e.ma_vai_tro]||e.ma_vai_tro}</td><td>${e.email}</td>
+ <td><span class="badge ${e.trang_thai==='hoat_dong'?'hoat_dong':'khoa'}">${e.trang_thai==='hoat_dong'?'Hoạt động':e.trang_thai==='khoa'?'Khóa':'Nghỉ việc'}</span></td>
+ ${isAdmin?`<td>${e.ma_vai_tro==='ADMIN'?'—':`<button class="btn sm outline" onclick="toggleStaff('${e.ma_nhan_vien}','${e.trang_thai==='hoat_dong'?'khoa':'hoat_dong'}')">${e.trang_thai==='hoat_dong'?'Khóa':'Kích hoạt'}</button>`}</td>`:''}</tr>`).join('')}</tbody></table></div>
+ ${isAdmin?`<div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm nhân viên</h3><div id="empMsg"></div>
+ <div class="grid g2">
+  <div class="field"><label>Họ tên</label><input id="eName"></div>
+  <div class="field"><label>Email đăng nhập</label><input id="eEmail"></div>
+  <div class="field"><label>Mật khẩu</label><input id="ePass" type="password"></div>
+  <div class="field"><label>SĐT</label><input id="ePhone"></div>
+  <div class="field"><label>Chức vụ</label><input id="ePos"></div>
+  <div class="field"><label>Vai trò</label><select id="eRole">${vaiTros.filter(v=>v.ma_vai_tro!=='ADMIN').map(v=>`<option value="${v.ma_vai_tro}">${v.ten_vai_tro}</option>`).join('')}</select></div>
+ </div><button class="btn primary" onclick="addEmployee()">Thêm nhân viên</button></div>`:''}
  </main></div>`;
 }
-async function loadReportBody(){
- const [report,revByMonth]=await Promise.all([api('/stats/reports?days='+reportRangeDays),api('/stats/revenue-by-month')]);
- const top=report.tourDistribution.slice(0,4);
- const otherShare=100-top.reduce((s,t)=>s+t.orderShare,0);
- const donutLabels=[...top.map(t=>t.name),'Khác'];
- const donutData=[...top.map(t=>t.orderShare), Math.max(otherShare,0)];
- document.getElementById('reportBody').innerHTML=`
-  <div class="grid g3" style="margin-bottom:18px">
-   <div class="stat-card"><div class="lbl">Tổng doanh thu</div><div class="val">${fmt(report.totalRevenue)}</div><div style="color:${report.revenueDelta>=0?'var(--success)':'var(--danger)'};font-size:12px;font-weight:700">${report.revenueDelta>=0?'▲':'▼'} ${Math.abs(report.revenueDelta)}% so với kỳ trước</div></div>
-   <div class="stat-card"><div class="lbl">Tổng đặt hàng</div><div class="val">${report.totalOrders}</div><div style="color:${report.ordersDelta>=0?'var(--success)':'var(--danger)'};font-size:12px;font-weight:700">${report.ordersDelta>=0?'▲':'▼'} ${Math.abs(report.ordersDelta)}% so với kỳ trước</div></div>
-   <div class="stat-card"><div class="lbl">Tổng khách hàng</div><div class="val">${report.totalCustomers}</div><div style="color:${report.customersDelta>=0?'var(--success)':'var(--danger)'};font-size:12px;font-weight:700">${report.customersDelta>=0?'▲':'▼'} ${Math.abs(report.customersDelta)}% so với kỳ trước</div></div>
-  </div>
-  <div class="grid g2" style="grid-template-columns:1.6fr 1fr">
-   <div class="chart-box"><h3 style="margin:0 0 8px">Doanh thu theo tháng</h3><canvas id="repBarChart" height="140"></canvas></div>
-   <div class="chart-box"><h3 style="margin:0 0 8px">Tỷ lệ đơn đặt theo tour</h3><canvas id="repDonutChart" height="140"></canvas></div>
-  </div>
-  <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Tổng hợp theo tour</h3>
-  <table><thead><tr><th>#</th><th>Tên tour</th><th>Doanh thu</th><th>Số đơn</th><th>Tỷ lệ</th></tr></thead>
-  <tbody>${report.tourDistribution.map((t,i)=>`<tr><td>${i+1}</td><td>${t.name}</td><td>${fmt(t.revenue)}</td><td>${t.orders}</td><td>${t.revenueShare}%</td></tr>`).join('')||'<tr><td colspan="5">Chưa có dữ liệu</td></tr>'}</tbody></table></div>
- `;
- new Chart(document.getElementById('repBarChart'),{type:'bar',data:{labels:revByMonth.map(r=>r.label),datasets:[{data:revByMonth.map(r=>r.total),backgroundColor:'#2F5CE0',borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v/1000000)+'tr'}}}}});
- new Chart(document.getElementById('repDonutChart'),{type:'doughnut',data:{labels:donutLabels,datasets:[{data:donutData,backgroundColor:['#2F5CE0','#1FAE6B','#F5A623','#E5484D','#9AA2B1']}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}});
+async function addEmployee(){
+ const msg=document.getElementById('empMsg');
+ try{ await api('/nhan-vien',{method:'POST',body:JSON.stringify({ho_ten:val('eName'),email:val('eEmail'),password:val('ePass'),sdt:val('ePhone'),chuc_vu:val('ePos'),ma_vai_tro:document.getElementById('eRole').value})});
+  nav('admin-staff');
+ }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
-function setReportRange(days){ reportRangeDays=days; nav('admin-reports'); }
+async function toggleStaff(id,trangThai){ await api(`/nhan-vien/${id}/trang-thai`,{method:'PATCH',body:JSON.stringify({trang_thai:trangThai})}); nav('admin-staff'); }
 
-/* ---------- Nhà cung cấp ---------- */
+/* ---- Nhà cung cấp ---- */
 async function AdminSuppliers(){
- const suppliers=await api('/suppliers');
+ const rows=await api('/nha-cung-cap');
  return `<div class="admin-shell">${adminSidebar('admin-suppliers')}<main class="admin-main">${adminTop('Nhà cung cấp')}
- <div class="card"><table><thead><tr><th>Mã</th><th>Tên nhà cung cấp</th><th>Loại</th><th>Người liên hệ</th><th>SĐT</th><th>Giá hợp đồng</th><th>Thao tác</th></tr></thead>
- <tbody>${suppliers.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.type}</td><td>${s.contact_name||''}</td><td>${s.phone||''}</td><td>${fmt(s.contract_price)}</td>
- <td><span class="icon-btn del" onclick="deleteSupplier('${s.id}')">🗑</span></td></tr>`).join('')||'<tr><td colspan="7">Chưa có nhà cung cấp</td></tr>'}</tbody></table></div>
+ <div class="card"><table><thead><tr><th>Mã</th><th>Tên</th><th>Loại</th><th>Liên hệ</th><th>SĐT</th><th>Giá hợp đồng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+ <tbody>${rows.map(s=>`<tr><td>${s.ma_ncc}</td><td>${s.ten_ncc}</td><td>${s.loai}</td><td>${s.nguoi_lien_he||''}</td><td>${s.sdt||''}</td><td>${fmt(s.gia_hop_dong)}</td>
+ <td><span class="badge ${s.trang_thai==='hop_tac'?'hoat_dong':'khoa'}">${s.trang_thai==='hop_tac'?'Hợp tác':s.trang_thai==='tam_ngung'?'Tạm ngừng':'Chấm dứt'}</span></td>
+ <td><span class="icon-btn del" onclick="deleteSupplier('${s.ma_ncc}')">🗑</span></td></tr>`).join('')}</tbody></table></div>
  <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm nhà cung cấp</h3><div id="supMsg"></div>
  <div class="grid g2">
   <div class="field"><label>Tên nhà cung cấp</label><input id="sName"></div>
-  <div class="field"><label>Loại</label><select id="sType"><option>Khách sạn</option><option>Nhà hàng</option><option>Vận chuyển</option><option>Vé máy bay</option></select></div>
+  <div class="field"><label>Loại</label><select id="sType"><option>Khách sạn</option><option>Vận chuyển</option><option>Vé máy bay</option><option>Nhà hàng</option><option>Tham quan</option><option>Khác</option></select></div>
   <div class="field"><label>Người liên hệ</label><input id="sContact"></div>
   <div class="field"><label>SĐT</label><input id="sPhone"></div>
   <div class="field"><label>Email</label><input id="sEmail"></div>
@@ -750,52 +792,27 @@ async function AdminSuppliers(){
 }
 async function addSupplier(){
  const msg=document.getElementById('supMsg');
- try{
-  await api('/suppliers',{method:'POST',body:JSON.stringify({name:val('sName'),type:document.getElementById('sType').value,contact_name:val('sContact'),phone:val('sPhone'),email:val('sEmail'),contract_price:parseInt(val('sPrice')||'0')})});
+ try{ await api('/nha-cung-cap',{method:'POST',body:JSON.stringify({ten_ncc:val('sName'),loai:document.getElementById('sType').value,nguoi_lien_he:val('sContact'),sdt:val('sPhone'),email:val('sEmail'),gia_hop_dong:parseInt(val('sPrice')||'0')})});
   nav('admin-suppliers');
  }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
 }
-async function deleteSupplier(id){ if(!confirm('Xóa nhà cung cấp này?')) return; await api('/suppliers/'+id,{method:'DELETE'}); nav('admin-suppliers'); }
-async function AdminStaff(){
- const employees=await api('/employees');
- const isAdmin=(getUser()||{}).isAdmin;
- return `<div class="admin-shell">${adminSidebar('admin-staff')}<main class="admin-main">${adminTop('Danh sách nhân viên')}
- <div class="filters-row"><input id="efKeyword" placeholder="Tìm tên, SĐT, email..." style="min-width:260px" oninput="applyStaffFilter()"></div>
- <div class="card"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Chức vụ</th><th>SĐT</th><th>Email</th><th>Trạng thái</th><th>Quyền</th>${isAdmin?'<th>Thao tác</th>':''}</tr></thead>
- <tbody id="staffTbody">${renderStaffRows(employees,isAdmin)}</tbody></table></div>
- ${isAdmin?`<div class="card" style="margin-top:18px"><h3 style="margin-top:0">Thêm nhân viên</h3><div id="empMsg"></div>
- <div class="grid g2">
-  <div class="field"><label>Họ tên</label><input id="eName"></div>
-  <div class="field"><label>Email đăng nhập</label><input id="eEmail"></div>
-  <div class="field"><label>Mật khẩu</label><input id="ePass" type="password"></div>
-  <div class="field"><label>SĐT</label><input id="ePhone"></div>
-  <div class="field"><label>Giới tính</label><select id="eGender"><option>Nam</option><option>Nữ</option></select></div>
-  <div class="field"><label>Chức vụ</label><input id="ePos"></div>
- </div><button class="btn primary" onclick="addEmployee()">Thêm nhân viên</button></div>`
- :`<p style="color:var(--muted);margin-top:14px;font-size:13px">Chỉ quản trị viên mới có quyền thêm nhân viên mới.</p>`}
+async function deleteSupplier(id){ if(!confirm('Xóa nhà cung cấp này?')) return; try{ await api('/nha-cung-cap/'+id,{method:'DELETE'}); }catch(e){} nav('admin-suppliers'); }
+
+/* ---- Báo cáo & thống kê ---- */
+async function AdminReports(){
+ return `<div class="admin-shell">${adminSidebar('admin-reports')}<main class="admin-main">${adminTop('Báo cáo & thống kê')}
+ <div id="reportBody"><div class="loading">Đang tải báo cáo...</div></div>
  </main></div>`;
 }
-async function addEmployee(){
- const msg=document.getElementById('empMsg');
- try{
-  await api('/employees',{method:'POST',body:JSON.stringify({name:val('eName'),email:val('eEmail'),password:val('ePass'),phone:val('ePhone'),gender:document.getElementById('eGender').value,position:val('ePos')})});
-  nav('admin-staff');
- }catch(e){ msg.innerHTML=`<div class="msg err">${e.message}</div>`; }
+async function loadReportBody(){
+ const [byMonth,byTour]=await Promise.all([api('/thong-ke/doanh-thu-thang'),api('/thong-ke/doanh-thu-tour')]);
+ document.getElementById('reportBody').innerHTML=`
+  <div class="chart-box"><h3 style="margin:0 0 8px">Doanh thu theo tháng</h3><canvas id="repBar" height="120"></canvas></div>
+  <div class="card" style="margin-top:18px"><h3 style="margin-top:0">Doanh thu theo tour</h3>
+  <table><thead><tr><th>#</th><th>Tên tour</th><th>Số đơn hiệu lực</th><th>Số khách</th><th>Thực thu</th></tr></thead>
+  <tbody>${byTour.map((t,i)=>`<tr><td>${i+1}</td><td>${t.ten_tour}</td><td>${t.so_don_hieu_luc}</td><td>${t.so_khach}</td><td>${fmt(t.thuc_thu)}</td></tr>`).join('')||'<tr><td colspan="5">Chưa có dữ liệu</td></tr>'}</tbody></table></div>`;
+ new Chart(document.getElementById('repBar'),{type:'bar',data:{labels:byMonth.map(m=>m.label),datasets:[{data:byMonth.map(m=>m.thuc_thu),backgroundColor:'#2F5CE0',borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v/1000000)+'tr'}}}}});
 }
-let staffCache=[];
-function renderStaffRows(employees,isAdmin){
- staffCache=employees;
- return employees.map(e=>`<tr><td>${e.id}</td><td>${e.name}</td><td>${e.position||''}</td><td>${e.phone||''}</td><td>${e.email||''}</td>
- <td><span class="badge ${e.is_active?'active':'inactive'}">${e.is_active?'Hoạt động':'Ngừng hoạt động'}</span></td>
- <td>${e.is_admin?'Admin':'Nhân viên'}</td>
- ${isAdmin?`<td>${e.is_admin?'—':`<button class="btn sm outline" onclick="toggleStaffStatus('${e.id}')">${e.is_active?'Tạm ngừng':'Kích hoạt'}</button>`}</td>`:''}</tr>`).join('')||'<tr><td colspan="8">Chưa có nhân viên</td></tr>';
-}
-function applyStaffFilter(){
- const kw=val('efKeyword').toLowerCase();
- const filtered=staffCache.filter(e=>(e.name+(e.phone||'')+(e.email||'')).toLowerCase().includes(kw));
- document.getElementById('staffTbody').innerHTML=renderStaffRows(filtered,(getUser()||{}).isAdmin);
-}
-async function toggleStaffStatus(id){ await api('/employees/'+id+'/status',{method:'PATCH'}); nav('admin-staff'); }
 
 /* ================= ROUTER ================= */
 async function render(){
@@ -807,30 +824,27 @@ async function render(){
   let html;
   switch(route.view){
    case 'home': html=await Home(); break;
-   case 'list-trongnuoc': html=await TourListView('trongnuoc'); break;
-   case 'list-nuocngoai': html=await TourListView('nuocngoai'); break;
+   case 'list-trong_nuoc': html=await TourListView('trong_nuoc'); break;
+   case 'list-nuoc_ngoai': html=await TourListView('nuoc_ngoai'); break;
    case 'detail': html=await TourDetail(route.params); break;
    case 'search': html=await SearchResult(route.params); break;
    case 'login': html=Login(); break;
    case 'register': html=Register(); break;
    case 'account': html=await Account(route.params); break;
-   case 'blog': html=`${siteHeader('blog')}<div class="wrap" style="padding:28px 24px"><h2>Blog du lịch</h2><p style="color:var(--muted)">Cẩm nang & kinh nghiệm du lịch sẽ sớm được cập nhật.</p></div>${siteFooter()}`; break;
    case 'contact': html=`${siteHeader('contact')}<div class="wrap" style="padding:28px 24px"><h2>Liên hệ</h2><p>Hotline: <b>1900 1900</b> · Email: support@travelgo.vn</p></div>${siteFooter()}`; break;
    case 'admin-dash': html=await AdminDash(); break;
    case 'admin-tours': html=await AdminTours(); break;
    case 'admin-bookings': html=await AdminBookings(); break;
-   case 'admin-crm': html=await AdminCRM(); break;
-   case 'admin-staff': html=await AdminStaff(); break;
+   case 'admin-customers': html=await AdminCustomers(); break;
    case 'admin-finance': html=await AdminFinance(); break;
+   case 'admin-staff': html=await AdminStaff(); break;
    case 'admin-suppliers': html=await AdminSuppliers(); break;
    case 'admin-reports': html=await AdminReports(); break;
    default: html=await Home();
   }
   app.innerHTML=html;
-  if(route.view==='admin-finance'){
-   const [invoices,revByMonth,methods]=await Promise.all([api('/stats/invoices'),api('/stats/revenue-by-month'),api('/stats/payment-methods')]);
-   financePage=1; mountFinanceCharts(invoices,revByMonth,methods);
-  }
+  if(route.view==='account' && route.params.sub==='orderDetail'){ maybeShowReviewForm(route.params.bookingId); }
+  if(route.view==='admin-finance'){ const methods=await api('/thong-ke/phuong-thuc-thanh-toan'); mountFinanceChart(methods); }
   if(route.view==='admin-reports'){ await loadReportBody(); }
  }catch(e){
   app.innerHTML=`${siteHeader('')}<div class="wrap" style="padding:40px 24px"><div class="msg err">${e.message||'Không thể tải dữ liệu từ máy chủ.'}</div></div>`;
