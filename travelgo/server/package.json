@@ -16,5 +16,10 @@
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
 }
